@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070708">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Экосистема ОП</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Шрифт грузится НЕблокирующе: страница открывается мгновенно даже без сети -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{--bg:#070708;--red:#E01029;--red-bright:#FF1F3D;--white:#F2F3F5;--muted:#6a6d75;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:#070708 !important;font-family:'Montserrat',sans-serif;-webkit-font-smoothing:antialiased;position:fixed;width:100%;overscroll-behavior:none;touch-action:none;}
+/* Гарантированная чёрная подложка — её невозможно осветлить blend-режимами в энергосбережении iOS */
+#stage::before{content:"";position:absolute;inset:0;background:#070708;z-index:-1;pointer-events:none;}
+#stage{position:fixed;inset:0;touch-action:none;-webkit-user-select:none;user-select:none;isolation:isolate;background:#070708;}
+canvas{position:absolute;inset:0;display:block;touch-action:none;z-index:0;}
+.nebula{position:absolute;inset:0;pointer-events:none;z-index:1;
+background:
+radial-gradient(50% 42% at 2% 0%, rgba(224,16,41,.85), rgba(94,8,19,.35) 30%, transparent 56%),
+radial-gradient(46% 40% at 99% 100%, rgba(224,16,41,.78), rgba(94,8,19,.3) 32%, transparent 58%),
+radial-gradient(30% 26% at 96% 4%, rgba(180,12,30,.4), transparent 50%),
+radial-gradient(34% 32% at 4% 96%, rgba(140,10,24,.45), transparent 56%);
+animation:breathe 16s ease-in-out infinite;}
+@keyframes breathe{0%,100%{opacity:.78}50%{opacity:1}}
+.smoke{position:absolute;inset:-30%;pointer-events:none;z-index:1;opacity:.5;
+background:radial-gradient(38% 30% at 10% 8%, rgba(224,16,41,.25), transparent 60%),radial-gradient(34% 30% at 90% 92%, rgba(224,16,41,.22), transparent 60%);
+filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(3%,-3%) scale(1.08)}}
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(80% 80% at 50% 50%, transparent 34%, rgba(0,0,0,.7) 100%);}
+.grain{display:none;}
+.intro{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity 1.2s ease, visibility 1.2s;}
+.intro.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.intro-core{width:14px;height:14px;border-radius:50%;background:var(--red-bright);box-shadow:0 0 40px 8px var(--red-bright);animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(2.4);opacity:1}}
+.hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;color:var(--white);font-size:12px;letter-spacing:.42em;text-transform:uppercase;font-weight:600;opacity:0;animation:hintpulse 2.6s ease-in-out infinite, fadeIn 1s ease forwards 2.4s;text-align:center;}
+@keyframes fadeIn{to{opacity:1}}
+@keyframes hintpulse{0%,100%{opacity:.45}50%{opacity:.9}}
+.brand{position:absolute;left:50%;top:20px;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:7px;opacity:0;animation:bfade 1s ease forwards 2.1s;}
+@keyframes bfade{to{opacity:1}}
+.brand-ring{display:block;animation:brandspin 14s linear infinite;filter:drop-shadow(0 0 6px rgba(224,16,41,0.35));}
+@keyframes brandspin{to{transform:rotate(360deg);}}
+.brand-name{color:var(--white);font-weight:800;font-size:13px;letter-spacing:.24em;line-height:1;}
+.brand b{color:var(--red-bright);}
+
+/* кнопка-гамбургер */
+.menu-btn{position:absolute;top:24px;left:26px;z-index:20;width:44px;height:44px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  background:rgba(20,8,12,0.35);border:1px solid rgba(255,80,100,0.18);border-radius:12px;
+  cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;animation:bfade 1s ease forwards 2.2s;transition:border-color .25s,background .25s;}
+.menu-btn:hover{border-color:rgba(255,80,100,0.5);background:rgba(40,12,18,0.5);}
+.menu-btn span{display:block;width:20px;height:2px;border-radius:2px;background:var(--white);
+  transition:transform .35s ease,opacity .25s ease;}
+.menu-btn.open span:nth-child(1){transform:translateY(4px) rotate(45deg);}
+.menu-btn.open span:nth-child(2){transform:translateY(-4px) rotate(-45deg);}
+
+/* ===== Круглые кнопки соцсетей (WhatsApp / Telegram) ===== */
+.social-top{position:absolute;top:24px;right:26px;z-index:20;display:flex;gap:10px;
+  opacity:0;animation:bfade 1s ease forwards 2.2s;}
+.social-btn{height:44px;border-radius:24px;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 14px 0 10px;
+  background:rgba(20,8,12,0.35);border:1px solid rgba(255,80,100,0.18);cursor:pointer;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  text-decoration:none;
+  transition:border-color .25s,background .25s,transform .2s;}
+.social-btn:hover{border-color:rgba(255,80,100,0.5);background:rgba(40,12,18,0.5);transform:translateY(-1px);}
+.social-btn svg{width:22px;height:22px;fill:var(--white);display:block;flex-shrink:0;}
+.wa-label{color:var(--white);font-size:8.5px;font-weight:800;letter-spacing:.13em;line-height:1.3;text-align:left;white-space:nowrap;}
+/* версия для шапки панели — чуть компактнее */
+.social-panel{display:flex;gap:9px;align-items:center;}
+.social-panel .social-btn{height:38px;padding:0 11px 0 8px;gap:7px;}
+.social-panel .social-btn svg{width:18px;height:18px;}
+.social-panel .wa-label{font-size:7.5px;}
+
+/* затемнение за панелью (лёгкое, не перекрывает анимацию) */
+.panel-overlay{position:absolute;inset:0;z-index:18;background:rgba(0,0,0,0);
+  pointer-events:none;transition:background .4s ease;}
+.panel-overlay.show{background:rgba(0,0,0,0.25);pointer-events:auto;}
+
+/* стеклянная панель */
+.panel{position:absolute;top:0;left:0;z-index:19;height:100%;
+  width:min(33%,420px);min-width:300px;
+  background:linear-gradient(135deg, rgba(26,9,13,0.78), rgba(9,5,7,0.72));
+  backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%);
+  border-right:1px solid rgba(255,80,100,0.15);
+  box-shadow:30px 0 80px rgba(0,0,0,0.5), inset -1px 0 0 rgba(255,255,255,0.04);
+  transform:translateX(-105%);transition:transform .5s cubic-bezier(.7,0,.2,1);
+  display:flex;flex-direction:column;padding:0 0 14px;overflow:hidden;}
+.panel.open{transform:translateX(0);}
+.panel-head{display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px 10px;margin-top:80px;border-bottom:1px solid rgba(255,80,100,0.1);flex-shrink:0;}
+.panel-title{color:var(--white);font-weight:800;font-size:13px;letter-spacing:.16em;}
+.panel-title b{color:var(--red-bright);}
+.panel-close{background:none;border:none;color:var(--muted);font-size:26px;line-height:1;
+  cursor:pointer;padding:0 4px;transition:color .2s;}
+.panel-close:hover{color:var(--white);}
+.panel-list{flex:1;min-height:0;overflow-y:auto;padding:12px 14px 18px;
+  display:flex;flex-direction:column;justify-content:space-between;gap:6px;}
+.panel-list::-webkit-scrollbar{width:4px;}
+.panel-list::-webkit-scrollbar-thumb{background:rgba(255,80,100,0.25);border-radius:4px;}
+.p-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:0 12px;border-radius:10px;flex:1;min-height:0;
+  background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);
+  transition:background .22s,border-color .22s,transform .22s;}
+.p-item:hover{background:rgba(224,16,41,0.12);border-color:rgba(255,80,100,0.4);transform:translateX(3px);}
+.p-name{color:var(--white);font-size:11px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;line-height:1.25;}
+.p-go{flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
+  padding:6px 11px;border-radius:8px;cursor:pointer;text-decoration:none;
+  background:linear-gradient(135deg,#E01029,#8a0a1c);
+  color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid rgba(255,120,135,0.3);transition:filter .2s,transform .2s;white-space:nowrap;}
+.p-go:hover{filter:brightness(1.18);transform:scale(1.04);}
+.p-go svg{width:10px;height:10px;}
+/* ===== Неактивные разделы (нет сайта) — аккуратно серые ===== */
+.p-item.p-inactive{background:rgba(255,255,255,0.012);border-color:rgba(255,255,255,0.03);}
+.p-item.p-inactive:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);transform:translateX(3px);}
+.p-item.p-inactive .p-name{color:rgba(160,165,175,0.55);}
+.p-go.p-soon{background:none;border:1px solid rgba(160,165,175,0.25);color:rgba(160,165,175,0.55);cursor:default;}
+.p-go.p-soon:hover{filter:none;transform:none;}
+</style>
+</head>
+<body>
+<div id="stage">
+<canvas id="c"></canvas>
+<div class="smoke"></div><div class="nebula"></div><div class="vignette"></div><div class="grain"></div>
+<div class="brand">
+  <svg class="brand-ring" viewBox="0 0 60 60" width="46" height="46" aria-hidden="true"></svg>
+  <span class="brand-name">СИСТЕМА <b>ОП</b></span>
+</div>
+<div class="hint">Нажмите на круг</div>
+<div style="position:fixed;right:8px;bottom:6px;z-index:50;color:rgba(255,80,100,0.5);font:600 9px monospace;letter-spacing:.05em;">v9 · рамка-края</div>
+
+<!-- кнопка-гамбургер -->
+<button id="menuBtn" class="menu-btn" aria-label="Меню">
+  <span></span><span></span>
+</button>
+
+<!-- ===== Соцсети в правом верхнем углу (ССЫЛКИ: впишите href вместо '#') ===== -->
+<div class="social-top">
+  <a class="social-btn" id="waTop" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm0 18.13h-.01c-1.52 0-3.01-.41-4.31-1.18l-.31-.18-3.2.84.85-3.12-.2-.32a8.2 8.2 0 01-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.82c0 4.54-3.7 8.49-8.25 8.49zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg><span class="wa-label">ОТДЕЛ<br>ПРОДАЖ</span>
+  </a>
+</div>
+
+<!-- выезжающая панель со списком разделов -->
+<aside id="panel" class="panel">
+  <div class="panel-head">
+    <span class="panel-title">ЭКОСИСТЕМА <b>ОП</b></span>
+    <div class="social-panel">
+      <a class="social-btn" id="waPanel" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm0 18.13h-.01c-1.52 0-3.01-.41-4.31-1.18l-.31-.18-3.2.84.85-3.12-.2-.32a8.2 8.2 0 01-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 012.41 5.82c0 4.54-3.7 8.49-8.25 8.49zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.48-.01-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.24 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg><span class="wa-label">ОТДЕЛ<br>ПРОДАЖ</span>
+      </a>
+      <button id="panelClose" class="panel-close" aria-label="Закрыть">&times;</button>
+    </div>
+  </div>
+  <div id="panelList" class="panel-list"></div>
+</aside>
+<div id="panelOverlay" class="panel-overlay"></div>
+</div>
+<div class="intro" id="intro"><div class="intro-core"></div></div>
+<script>
+// ===== СТОРОЖ (выполняется первым): страница не может застрять на заставке =====
+// Скрываем интро по таймеру независимо ни от чего + ловим любые ошибки ниже
+setTimeout(function(){var el=document.getElementById('intro');if(el)el.classList.add('hide');},1800);
+window.addEventListener('error',function(){
+  var el=document.getElementById('intro');if(el)el.classList.add('hide');
+});
+const canvas=document.getElementById('c');
+const ctx=canvas?canvas.getContext('2d'):null;
+// Сторож: страница не застревает на заставке, даже если что-то пойдёт не так
+setTimeout(function(){var el=document.getElementById('intro');if(el)el.classList.add('hide');},1800);
+window.addEventListener('error',function(){var el=document.getElementById('intro');if(el)el.classList.add('hide');});
+// Глобальная защита canvas-вызовов от Safari/WebKit: гарантируем неотрицательные/конечные радиусы
+if(ctx){
+  const _fin=(v,d)=>(typeof v==='number'&&isFinite(v))?v:(d||0);
+  const _pos=(v)=>{v=_fin(v,0);return v<0?0:v;};
+  const _arc=ctx.arc.bind(ctx);
+  ctx.arc=function(x,y,r,a,b,c){try{return _arc(_fin(x,0),_fin(y,0),_pos(r),_fin(a,0),_fin(b,0),c);}catch(e){}};
+  if(ctx.ellipse){const _el=ctx.ellipse.bind(ctx);
+    ctx.ellipse=function(x,y,rx,ry,rot,a,b,c){try{return _el(_fin(x,0),_fin(y,0),_pos(rx),_pos(ry),_fin(rot,0),_fin(a,0),_fin(b,0),c);}catch(e){}};}
+  const _crg=ctx.createRadialGradient.bind(ctx);
+  ctx.createRadialGradient=function(x0,y0,r0,x1,y1,r1){
+    try{return _crg(_fin(x0,0),_fin(y0,0),_pos(r0),_fin(x1,0),_fin(y1,0),Math.max(_pos(r1),_pos(r0)+0.01));}
+    catch(e){return _crg(0,0,0,0,0,1);}
+  };
+  const _clg=ctx.createLinearGradient.bind(ctx);
+  ctx.createLinearGradient=function(x0,y0,x1,y1){try{return _clg(_fin(x0,0),_fin(y0,0),_fin(x1,0),_fin(y1,0));}catch(e){return _crg(0,0,0,0,0,1);}};
+}
+const WHITE='#F2F3F5';
+// Флаг тач-устройства — объявлен в начале, используется для мобильных настроек (скорость, ярлыки, радиус тапа)
+const IS_TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+let W,H,DPR,cx,cy,MIN;
+function resize(){
+DPR=Math.min(window.devicePixelRatio||1,2);
+W=window.innerWidth;
+// В мобильных WebView (Telegram/WhatsApp) innerHeight скачет из-за адресной строки — берём максимально доступную высоту
+H=Math.max(window.innerHeight, (window.visualViewport&&window.visualViewport.height)||0, document.documentElement.clientHeight||0);
+canvas.width=W*DPR;canvas.height=H*DPR;
+canvas.style.width=W+'px';canvas.style.height=H+'px';
+ctx.setTransform(DPR,0,0,DPR,0,0);
+cx=W/2;cy=H/2;MIN=Math.min(W,H);
+window.__grid=null; // пересчитать сетку-созвездие под новый размер
+}
+resize();
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',()=>{resize();setTimeout(resize,300);});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
+/* ---------- ПЛАНЕТЫ (12) — планетарные орбиты ---------- */
+const NAMES=[
+'Усиление ОП','Панель управления для РОПов','Бот-помощник','Блог о продажах в Threads',
+'Библиотека кейсов','Партнёрская программа','Компании-партнёры','Ассоциация системных продаж',
+'Платформа участников ассоциации','Книга «Отдел продаж. Другой подход»','Библиотека отзывов','Библиотека аудитов',
+'Инвестиционная программа'
+];
+/* ===== ССЫЛКИ РАЗДЕЛОВ — впиши сюда реальные URL (пока заглушки '#') ===== */
+const LINKS={
+  'Усиление ОП':'#',
+  'Панель управления для РОПов':'#',
+  'Бот-помощник':'#',
+  'Блог о продажах в Threads':'#',
+  'Библиотека кейсов':'#',
+  'Партнёрская программа':'#',
+  'Компании-партнёры':'#',
+  'Ассоциация системных продаж':'#',
+  'Платформа участников ассоциации':'#',
+  'Книга «Отдел продаж. Другой подход»':'#',
+  'Библиотека отзывов':'#',
+  'Библиотека аудитов':'#',
+  'Инвестиционная программа':'#'
+};
+/* ===== ССЫЛКИ СОЦСЕТЕЙ — впиши сюда реальные URL (пока заглушки '#') =====
+   WhatsApp: например 'https://wa.me/77001234567'
+   Telegram: например 'https://t.me/your_username'                          */
+const SOCIAL={
+  whatsapp:'https://wa.me/77008880242?text=EcoSystemOp',
+  telegram:'#'
+};
+/* ========================================================================= */
+// СЕТЬ-СОЗВЕЗДИЕ: шары свободно дрейфуют, между близкими тянутся линии
+const PLANETS=NAMES.map((name,i)=>({
+name, link:LINKS[name]||'#',
+baseSize:13+Math.random()*4,
+size:0, maxSize:0,
+x:0, y:0, vx:0, vy:0,
+pulsePhase:Math.random()*Math.PI*2,
+pulseSpeed:0.0009+Math.random()*0.0006
+}));
+// центр (лого) — зона, куда шары не залетают
+let coreRadius=0;
+function seed(){
+PLANETS.forEach((p,i)=>{
+if(IS_TOUCH){
+// МОБИЛЬНЫЙ: орбитальная раскладка — шары распределены по ВСЕЙ площади экрана
+const ring=Math.min(W,H);
+p.orbAng=(i/PLANETS.length)*Math.PI*2 + (Math.random()-0.5)*0.5;     // стартовый угол (равномерно + лёгкий разброс)
+// радиусы в широком диапазоне (от близких к центру до дальних к краям) → заполняем весь экран
+p.orbRad=ring*(0.26+ (i%4)*0.13 + Math.random()*0.08);
+// орбита эллиптическая: по вертикали растянута (экран высокий) → шары идут и вверху, и внизу
+p.orbStretchY=1.45+Math.random()*0.35;
+p.orbSpin=(0.000045+Math.random()*0.00007)*(Math.random()<0.5?-1:1); // МЕДЛЕННО, направление случайно → хаос
+p.orbWobAmp=ring*(0.025+Math.random()*0.035);                       // амплитуда «дыхания» радиуса
+p.orbWobSpd=0.0003+Math.random()*0.0004;
+p.orbWobPh=Math.random()*Math.PI*2;
+// начальная позиция на орбите
+p.x=cx+Math.cos(p.orbAng)*p.orbRad;
+p.y=cy+Math.sin(p.orbAng)*p.orbRad*(1.45);
+p.vx=0;p.vy=0;
+return;
+}
+// ДЕСКТОП: прежняя случайная раскладка со свободным дрейфом (без изменений)
+let ok=false,tr=0;
+while(!ok&&tr<300){tr++;
+p.x=Math.random()*(W-160)+80;
+p.y=Math.random()*(H-200)+100;
+if(Math.hypot(p.x-cx,p.y-cy)<coreRadius+120)continue;
+ok=true;
+for(let j=0;j<i;j++)if(Math.hypot(p.x-PLANETS[j].x,p.y-PLANETS[j].y)<150){ok=false;break;}
+}
+const a=Math.random()*Math.PI*2,sp=0.2+Math.random()*0.2;
+p.vx=Math.cos(a)*sp;p.vy=Math.sin(a)*sp;
+});
+}
+// звёзды
+const stars=[];
+for(let i=0;i<280;i++){const d=Math.random();stars.push({x:Math.random(),y:Math.random(),r:d*1.5+0.2,tw:Math.random()*Math.PI*2,tws:Math.random()*0.05+0.006,depth:d*0.7+0.15,warm:Math.random()<0.25});}
+// пыль
+const dust=[];
+for(let i=0;i<70;i++){dust.push({a:Math.random()*Math.PI*2,rad:Math.random()*0.5+0.06,r:Math.random()*1.6+0.4,sp:(Math.random()*0.0004+0.0001)*(Math.random()<0.5?-1:1),o:Math.random()*0.5+0.15});}
+// падающие $
+let bucks=[];
+function spawnBuck(){bucks.push({
+x:Math.random()*W, y:-30,
+vy:Math.random()*3+5, // резкое падение вниз
+vx:(Math.random()-0.5)*0.3,
+rot:Math.random()*Math.PI*2,
+vr:(Math.random()-0.5)*0.04,
+size:Math.random()*8+9, // мельче
+sway:0,
+swaySpeed:0, // без покачивания — летят прямо
+alpha:Math.random()*0.35+0.4
+});}
+setInterval(()=>{if(Math.random()<0.4)spawnBuck();},2600); // реже и не так часто
+let mouseX=0,mouseY=0,tMouseX=0,tMouseY=0;
+let hoverPlanet=null,dragPlanet=null,panelHover=null;
+const stageEl=document.getElementById('stage');
+// радиус попадания: на тач-устройствах палец крупнее курсора → увеличиваем зону
+function hitRadius(p){return p.size+(IS_TOUCH?34:16);}
+stageEl.addEventListener('mousemove',e=>{tMouseX=(e.clientX/W-0.5);tMouseY=(e.clientY/H-0.5);pointer(e.clientX,e.clientY);});
+stageEl.addEventListener('mousedown',e=>onDown(e.clientX,e.clientY));
+window.addEventListener('mouseup',e=>onUp(e&&e.clientX,e&&e.clientY));
+stageEl.addEventListener('touchmove',e=>{const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);pointer(t.clientX,t.clientY);if(dragPlanet)e.preventDefault();},{passive:false});
+stageEl.addEventListener('touchstart',e=>{const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);onDown(t.clientX,t.clientY);},{passive:true});
+stageEl.addEventListener('touchend',e=>{const t=(e.changedTouches&&e.changedTouches[0]);onUp(t&&t.clientX,t&&t.clientY);},{passive:true});
+stageEl.addEventListener('touchcancel',()=>onUp(),{passive:true});
+let nowG=0;
+function pointer(px,py){
+if(dragPlanet){
+dragPlanet.x=px;dragPlanet.y=py;
+dragPlanet.vx=(px-(dragPlanet._lx||px));dragPlanet.vy=(py-(dragPlanet._ly||py));
+dragPlanet._lx=px;dragPlanet._ly=py;
+// засчитываем движение только если палец реально сместился (защита от микродрожания → тап не теряется)
+if(Math.hypot(px-(dragPlanet._sx||px),py-(dragPlanet._sy||py))>10)dragPlanet._moved=true;
+return;
+}
+hoverPlanet=null;
+for(const p of PLANETS){if(Math.hypot(px-p.x,py-p.y)<hitRadius(p)){hoverPlanet=p;break;}}
+stageEl.style.cursor=(hoverPlanet&&hoverPlanet.link&&hoverPlanet.link!=='#')?'pointer':'default';
+}
+function onDown(px,py){
+for(const p of PLANETS){if(Math.hypot(px-p.x,py-p.y)<hitRadius(p)){dragPlanet=p;p._lx=px;p._ly=py;p._sx=px;p._sy=py;p._moved=false;return;}}
+}
+function onUp(px,py){
+if(!dragPlanet)return;
+const p=dragPlanet,m=p._moved;dragPlanet=null;
+// на мобильном пересчитываем орбиту от точки, где отпустили — плавное продолжение без рывка
+if(IS_TOUCH&&m){
+  p.orbAng=Math.atan2(p.y-cy,p.x-cx);
+  p.orbRad=Math.hypot(p.x-cx,p.y-cy)||p.orbRad;
+  p._lastNow=nowG;
+}
+if(!m)activate(p);
+}
+function go(name,link){
+  if(link&&link!=='#'){
+    // window.open часто блокируется во встроенных браузерах Telegram/WhatsApp → фолбэк через клик по <a>
+    let w=null;
+    try{w=window.open(link,'_blank');}catch(e){}
+    if(!w){
+      const a=document.createElement('a');
+      a.href=link;a.target='_blank';a.rel='noopener';
+      document.body.appendChild(a);a.click();a.remove();
+    }
+  }
+  else{alert('Раздел: '+name+'\n(вставьте ссылку в объект LINKS)');}
+}
+function activate(p){if(!p.link||p.link==='#')return;go(p.name,p.link);} // серые (без сайта) не кликаются
+let t0=performance.now();
+function frame(now){
+requestAnimationFrame(frame); // следующий кадр планируем ПЕРВЫМ — цикл не умирает от ошибок ниже
+try{
+nowG=now;
+const dt=Math.min(now-t0,50);t0=now;
+let k=dt/16.67; // нормализация скорости к 60fps
+if(k>1.6)k=1.6; // ограничение шага: при просадке кадров на мобильном шары не дёргаются рывками
+mouseX+=(tMouseX-mouseX)*0.045;mouseY+=(tMouseY-mouseY)*0.045;
+ctx.clearRect(0,0,W,H);
+// звёзды
+for(const s of stars){
+s.tw+=s.tws;
+const px=s.x*W-mouseX*55*s.depth,py=s.y*H-mouseY*55*s.depth;
+const tw=0.5+0.5*Math.sin(s.tw);
+ctx.beginPath();ctx.arc(px,py,s.r,0,Math.PI*2);
+ctx.fillStyle=s.warm?`rgba(255,80,100,${(0.3+tw*0.6)*s.depth+0.05})`:`rgba(230,222,228,${(0.22+tw*0.6)*s.depth+0.07})`;
+ctx.fill();
+}
+// падающие $
+for(let i=bucks.length-1;i>=0;i--){
+const b=bucks[i];
+b.y+=b.vy*k;
+b.x+=b.vx*k;
+b.rot+=b.vr*k;
+if(b.y>H+40){bucks.splice(i,1);continue;}
+// световой след падения
+const tg=ctx.createLinearGradient(b.x,b.y,b.x-b.vx*7,b.y-b.vy*7);
+tg.addColorStop(0,`rgba(255,70,90,${b.alpha*0.5})`);tg.addColorStop(1,'rgba(255,70,90,0)');
+ctx.strokeStyle=tg;ctx.lineWidth=1.4;ctx.beginPath();
+ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-b.vx*7,b.y-b.vy*7);ctx.stroke();
+// сам символ
+ctx.save();
+ctx.translate(b.x,b.y);ctx.rotate(b.rot);
+ctx.font='800 '+b.size+"px 'Montserrat', sans-serif";
+ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.shadowColor='rgba(224,16,41,0.55)';ctx.shadowBlur=8;
+ctx.fillStyle=`rgba(255,70,90,${b.alpha})`;
+ctx.fillText('$',0,0);
+ctx.restore();
+}
+ctx.shadowBlur=0;
+// пыль вокруг лого (мягкий параллакс)
+ctx.save();ctx.translate(-mouseX*30,-mouseY*30);
+for(const d of dust){
+d.a+=d.sp*dt;const r=d.rad*MIN;
+const x=cx+Math.cos(d.a)*r,y=cy+Math.sin(d.a)*r*0.7;
+ctx.beginPath();ctx.arc(x,y,d.r,0,Math.PI*2);
+ctx.fillStyle=`rgba(224,40,60,${d.o*0.4})`;ctx.fill();
+}
+ctx.restore();
+// ===== ДРЕЙФ + СЕТЬ ЛИНИЙ =====
+updatePlanets(k);
+// линии-связи: КАЖДЫЙ круг соединён с КАЖДЫМ; ближе — ярче, дальше — тусклее
+const FADE=Math.max(420,MIN*0.7);
+for(let i=0;i<PLANETS.length;i++)for(let j=i+1;j<PLANETS.length;j++){
+const a=PLANETS[i],b=PLANETS[j];
+const d=Math.hypot(b.x-a.x,b.y-a.y);
+const al=Math.max(0.06,(1-d/FADE)*0.5); // минимум 0.06 — линия есть всегда
+const g=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+g.addColorStop(0,`rgba(255,60,82,${al})`);
+g.addColorStop(0.5,`rgba(224,16,41,${al*0.6})`);
+g.addColorStop(1,`rgba(255,60,82,${al})`);
+ctx.strokeStyle=g;ctx.lineWidth=al>0.2?1:0.6;ctx.beginPath();
+ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+}
+// линии от центра-лого к каждому шару — постоянная связь с ядром
+for(const p of PLANETS){
+const d=Math.hypot(p.x-cx,p.y-cy);
+if(panelHover===p){
+  ctx.strokeStyle='rgba(255,60,82,0.85)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);ctx.stroke();
+  continue;
+}
+const al=Math.max(0,(1-d/(MIN*0.6)))*0.28;
+if(al<=0)continue;
+ctx.strokeStyle=`rgba(224,16,41,${al})`;ctx.lineWidth=0.8;
+ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.x,p.y);ctx.stroke();
+}
+// ЛОГО в центре
+try{drawCoreLogo(now);}catch(e){}
+// рисуем планеты (мелкие/дальние позади; подсвеченный из панели — поверх всех)
+const order=[...PLANETS].sort((a,b)=>{
+  if(a===panelHover)return 1;if(b===panelHover)return -1;
+  return a.size-b.size;
+});
+for(const p of order){try{drawPlanet(p,now);}catch(e){}}
+}catch(e){} // кадр с ошибкой пропускается, анимация продолжается
+}
+function updatePlanets(k){
+coreRadius=IS_TOUCH?Math.max(40,MIN*0.10):Math.max(64,MIN*0.15);
+const szMul=IS_TOUCH?0.62:1;  // шары ещё мельче на мобильном
+for(const p of PLANETS){
+const pulse=1+0.26*Math.sin(nowG*p.pulseSpeed+p.pulsePhase);
+p.size=p.baseSize*pulse*szMul;
+p.maxSize=p.baseSize*1.26*1.15*szMul;
+}
+
+// ===== МОБИЛЬНЫЙ: 13 шаров по периметру экрана (края + углы), центр свободен =====
+if(IS_TOUCH){
+  const topSafe=(window.__safeTop||0);
+  const botSafe=(window.__safeBot||0);
+  const L=W*0.085;                    // левая колонка
+  const R=W*0.915;                    // правая колонка
+  const T=128+topSafe;                // верхний ряд (под брендом)
+  const B=H-96-botSafe;               // нижний ряд (над подсказкой)
+  if(!window.__grid){
+    // 13 точек по рамке: углы + промежуточные. Доли по периметру.
+    // верх: 3 (лево-верх угол, центр-верх, право-верх угол)
+    // право: 2 промежуточных
+    // низ: 3 (право-низ угол, центр-низ, лево-низ угол)
+    // лево: 2 промежуточных
+    // + 3 «средних» на половине высоты у бортов и сверху-центр уже есть → добираем до 13
+    const midY1=T+(B-T)*0.34, midY2=T+(B-T)*0.66, midY=T+(B-T)*0.5;
+    const cxv=W*0.5, cl=W*0.04, crr=W*0.96;
+    const pts=[
+      {x:L,      y:T},                 // 0 лево-верх угол
+      {x:cxv,    y:T},                 // 1 центр-верх
+      {x:R,      y:T},                 // 2 право-верх угол
+      {x:cl,     y:midY1},             // 3 левый борт верх
+      {x:crr,    y:midY1},             // 4 правый борт верх
+      {x:cl,     y:midY},              // 5 левый борт центр
+      {x:crr,    y:midY},              // 6 правый борт центр
+      {x:cl,     y:midY2},             // 7 левый борт низ
+      {x:crr,    y:midY2},             // 8 правый борт низ
+      {x:L,      y:B},                 // 9 лево-низ угол
+      {x:cxv,    y:B-(B-T)*0.07},       // 10 центр-низ (чуть выше)
+      {x:R,      y:B},                 // 11 право-низ угол
+      {x:cxv,    y:H-58}               // 12 самый низ-центр (у подсказки)
+    ];
+    PLANETS.forEach((p,i)=>{
+      const g=pts[i]||{x:cxv,y:midY};
+      p._homeX=g.x; p._homeY=g.y;
+      p._dphase=Math.random()*Math.PI*2;
+      p._dspd=0.0004+Math.random()*0.0003;
+      p._damp=7+Math.random()*5;       // амплитуда живого покачивания
+      p._dax=Math.random()*Math.PI*2;
+    });
+    window.__grid=1;
+  }
+  PLANETS.forEach((p)=>{
+    if(p===dragPlanet)return;
+    // лёгкое живое покачивание вокруг точки на краю (по обеим осям, эллиптично)
+    const tx=p._homeX+Math.cos(nowG*p._dspd+p._dphase)*p._damp;
+    const ty=p._homeY+Math.sin(nowG*p._dspd*1.15+p._dax)*p._damp;
+    p.x+=(tx-p.x)*0.05*k;
+    p.y+=(ty-p.y)*0.05*k;
+    const m=p.size+5;
+    if(p.x<m)p.x=m; if(p.x>W-m)p.x=W-m;
+    if(p.y<T-30)p.y=T-30; if(p.y>H-50)p.y=H-50;
+  });
+  return;
+}
+
+// ===== ДЕСКТОП: прежний свободный дрейф (БЕЗ ИЗМЕНЕНИЙ) =====
+// мягкое отталкивание, чтобы держали дистанцию
+for(let i=0;i<PLANETS.length;i++)for(let j=i+1;j<PLANETS.length;j++){
+const a=PLANETS[i],b=PLANETS[j];
+let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||0.001;
+const need=140;
+if(d<need){const nx=dx/d,ny=dy/d,f=(need-d)/need*0.4*k;a.vx-=nx*f;a.vy-=ny*f;b.vx+=nx*f;b.vy+=ny*f;}
+}
+for(const p of PLANETS){
+if(p===dragPlanet)continue;
+// отталкивание от центра-лого
+let dcx=p.x-cx,dcy=p.y-cy,dc=Math.hypot(dcx,dcy)||0.001;
+const keep=coreRadius+110;
+if(dc<keep){const nx=dcx/dc,ny=dcy/dc,f=(keep-dc)/keep*0.6*k;p.vx+=nx*f;p.vy+=ny*f;}
+// отталкивание от логотипа «СИСТЕМА ОП» сверху (не подлетать близко)
+let bdx=p.x-W/2,bdy=p.y-62,bd=Math.hypot(bdx,bdy)||0.001;
+const bKeep=130+p.maxSize;
+if(bd<bKeep){const nx=bdx/bd,ny=bdy/bd,f=(bKeep-bd)/bKeep*0.7*k;p.vx+=nx*f;p.vy+=ny*f;}
+p.x+=p.vx*k;p.y+=p.vy*k;
+// поддержание движения
+const sp=Math.hypot(p.vx,p.vy);
+if(sp<0.24){const a=Math.random()*Math.PI*2;p.vx+=Math.cos(a)*0.065;p.vy+=Math.sin(a)*0.065;}
+if(sp>1.05){p.vx*=0.96;p.vy*=0.96;}
+p.vx*=0.996;p.vy*=0.996;
+// отскок от краёв. Используем ФАКТИЧЕСКУЮ ширину подписи (измерена при отрисовке) — буквы не срезаются
+const labelHalf=Math.min(p.labelHalf||75, W*0.5-20);
+const mx=Math.max(p.maxSize+14, labelHalf+12);
+const m=p.maxSize+14;
+const mb=p.maxSize+110;
+if(p.x<mx){p.x=mx;p.vx=Math.abs(p.vx);}
+if(p.x>W-mx){p.x=W-mx;p.vx=-Math.abs(p.vx);}
+if(p.y<m+54){p.y=m+54;p.vy=Math.abs(p.vy);}
+if(p.y>H-mb){p.y=H-mb;p.vy=-Math.abs(p.vy);}
+}
+}
+function drawPlanet(p,now){
+const isHover=(hoverPlanet===p||dragPlanet===p);
+const isPanel=(panelHover===p);
+const inactive=(!p.link||p.link==='#'); // нет сайта → серый, некликабельный вид
+let sz=p.size;if(isPanel)sz*=1.6;else if(isHover)sz*=1.12;
+// пульсирующее кольцо-маркер при наведении из панели
+if(isPanel){
+  const ringR=sz*1.9+6*Math.sin(now*0.012);
+  ctx.beginPath();ctx.arc(p.x,p.y,ringR,0,Math.PI*2);
+  ctx.strokeStyle=inactive?'rgba(170,175,185,0.7)':'rgba(255,90,110,0.9)';ctx.lineWidth=2;ctx.stroke();
+}
+// мягкая опорная тень под сферой — добавляет вес и "дороговизну"
+const sh=ctx.createRadialGradient(p.x,p.y+sz*0.2,0,p.x,p.y+sz*0.2,sz*1.5);
+sh.addColorStop(0,'rgba(0,0,0,0.35)');sh.addColorStop(1,'rgba(0,0,0,0)');
+ctx.beginPath();ctx.arc(p.x,p.y+sz*0.2,sz*1.5,0,Math.PI*2);ctx.fillStyle=sh;ctx.fill();
+// внешнее свечение (ореол): у неактивных — слабое серое
+const glowA=isPanel?0.8:(isHover?0.5:0.24);
+const glowR=isPanel?sz*3.4:sz*2.8;
+const pg=ctx.createRadialGradient(p.x,p.y,sz*0.6,p.x,p.y,glowR);
+if(inactive){pg.addColorStop(0,`rgba(150,155,165,${glowA*0.35})`);pg.addColorStop(1,'rgba(120,125,135,0)');}
+else{pg.addColorStop(0,`rgba(255,30,55,${glowA})`);pg.addColorStop(1,'rgba(224,16,41,0)');}
+ctx.beginPath();ctx.arc(p.x,p.y,glowR,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();
+// ТЕЛО — глубокое полированное стекло (у неактивных — благородный серый)
+const bg=ctx.createRadialGradient(p.x-sz*0.4,p.y-sz*0.45,sz*0.08,p.x+sz*0.25,p.y+sz*0.4,sz*1.3);
+if(inactive){
+bg.addColorStop(0,'#9aa0ab');
+bg.addColorStop(0.25,'#6f7480');
+bg.addColorStop(0.55,'#4a4e58');
+bg.addColorStop(0.85,'#2a2c33');
+bg.addColorStop(1,'#101114');
+}else{
+bg.addColorStop(0,'#ff4d66'); // тёплый красный отблик (без белого)
+bg.addColorStop(0.25,'#e8203c');
+bg.addColorStop(0.55,'#b00f24'); // насыщенный благородный красный
+bg.addColorStop(0.85,'#5e0813');
+bg.addColorStop(1,'#1c0207'); // глубокая тень — объём
+}
+ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);ctx.fillStyle=bg;ctx.fill();
+ctx.save();
+ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);ctx.clip();
+// внутренняя тень по нижнему краю (даёт стеклянную выпуклость)
+const inner=ctx.createRadialGradient(p.x,p.y,sz*0.55,p.x,p.y,sz);
+inner.addColorStop(0,'rgba(0,0,0,0)');inner.addColorStop(1,inactive?'rgba(8,9,12,0.55)':'rgba(20,2,6,0.55)');
+ctx.fillStyle=inner;ctx.fillRect(p.x-sz,p.y-sz,sz*2,sz*2);
+// отражённый свет снизу (rim light) — премиум
+const rim=ctx.createRadialGradient(p.x+sz*0.35,p.y+sz*0.7,sz*0.05,p.x+sz*0.35,p.y+sz*0.7,sz*0.95);
+if(inactive){rim.addColorStop(0,'rgba(160,165,175,0.35)');rim.addColorStop(1,'rgba(160,165,175,0)');}
+else{rim.addColorStop(0,'rgba(224,40,60,0.5)');rim.addColorStop(1,'rgba(224,40,60,0)');}
+ctx.fillStyle=rim;ctx.fillRect(p.x-sz,p.y-sz,sz*2,sz*2);
+ctx.restore();
+// тонкий светящийся ободок
+ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);
+ctx.strokeStyle=inactive?`rgba(190,195,205,${isHover?0.45:0.18})`:`rgba(255,140,155,${isHover?0.7:0.22})`;ctx.lineWidth=1;ctx.stroke();
+// подпись — строго под шаром, аккуратный капс с разрядкой
+const labelTop=p.y+(p.maxSize||sz)+(IS_TOUCH?7:15);
+ctx.textAlign='center';ctx.textBaseline='top';
+// размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
+const fsBase=IS_TOUCH?7.5:11, fsPanel=IS_TOUCH?8.5:12;
+ctx.font=((isHover||isPanel)?'700 ':'500 ')+(isPanel?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
+// неактивные — приглушённая серая подпись
+ctx.fillStyle=inactive?((isHover||isPanel)?'rgba(200,205,213,0.78)':'rgba(150,155,165,0.5)')
+                      :((isHover||isPanel)?'#FFFFFF':'rgba(238,240,243,0.85)');
+ctx.shadowColor=isPanel?(inactive?'rgba(120,125,135,0.6)':'rgba(255,30,55,0.9)'):'rgba(0,0,0,0.95)';ctx.shadowBlur=isPanel?14:7;
+const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?10:15);
+p.labelHalf=Math.max(p.labelHalf||0, lw/2); // запоминаем фактическую полуширину подписи
+ctx.shadowBlur=0;
+}
+function drawCoreLogo(now){
+const baseR=IS_TOUCH?Math.max(40,MIN*0.085):Math.max(70,MIN*0.13);
+const pulse=1+0.11*Math.sin(now*0.0022); // выраженный синхронный пульс всего лого
+const R=baseR*pulse;
+const halo=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
+halo.addColorStop(0,`rgba(224,16,41,${0.5*pulse})`);halo.addColorStop(0.3,'rgba(224,16,41,0.16)');halo.addColorStop(1,'rgba(224,16,41,0)');
+ctx.beginPath();ctx.arc(cx,cy,R*2.4,0,Math.PI*2);ctx.fillStyle=halo;ctx.fill();
+const rot=now*0.0007,N=32;
+for(let i=0;i<N;i++){
+const a=(i/N)*Math.PI*2+rot,t=i/N;
+const dotR=1.2+t*4.4;
+const x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+const isRed=(Math.cos(a)>=-0.15);
+ctx.beginPath();ctx.arc(x,y,dotR,0,Math.PI*2);
+if(isRed){ctx.fillStyle='#E01029';ctx.shadowColor='rgba(224,16,41,0.8)';ctx.shadowBlur=8;}
+else{ctx.fillStyle='#F2F3F5';ctx.shadowColor='rgba(255,255,255,0.4)';ctx.shadowBlur=5;}
+ctx.fill();
+}
+ctx.shadowBlur=0;
+ctx.textAlign='center';ctx.textBaseline='middle';
+// надпись масштабируется ВМЕСТЕ с кольцом (тот же pulse)
+const fs1=IS_TOUCH?Math.max(10,R*0.18):Math.max(13,R*0.2);
+const fs2=IS_TOUCH?Math.max(13,R*0.27):Math.max(17,R*0.3);
+ctx.shadowColor='rgba(224,16,41,0.5)';ctx.shadowBlur=6+6*((pulse-1)/0.11+1)/2;
+ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
+ctx.fillText('ЭКОСИСТЕМА',cx,cy-fs2*0.36);
+ctx.font='900 '+fs2+"px 'Montserrat', sans-serif";ctx.fillStyle='#E01029';
+ctx.fillText('ОП',cx,cy+fs1*0.62);
+ctx.shadowBlur=0;
+}
+function wrapText(text,x,y,lh){
+const words=text.split(' ');let line='',lines=[];
+for(const w of words){if((line+w).length>16&&line){lines.push(line.trim());line=w+' ';}else line+=w+' ';}
+if(line)lines.push(line.trim());
+const sy=y-(lines.length-1)*lh/2;
+lines.forEach((l,i)=>ctx.fillText(l,x,sy+i*lh));
+}
+function wrapTextTop(text,x,top,lh){
+// перенос по реальной ширине; на узком мобильном делаем уже, чтобы подпись не вылезала за край
+const maxW=IS_TOUCH?Math.min(120, W*0.34):Math.min(150, W*0.4);
+const words=text.split(' ');let line='',lines=[];
+for(const w of words){
+const test=line?line+' '+w:w;
+if(ctx.measureText(test).width>maxW && line){lines.push(line);line=w;}
+else line=test;
+}
+if(line)lines.push(line);
+let widest=0;
+lines.forEach(l=>{const lw=ctx.measureText(l).width;if(lw>widest)widest=lw;});
+// прижимаем центр подписи внутрь экрана, чтобы длинная строка не уходила за край
+let lx=x;
+const half=widest/2, pad=10;
+if(lx-half<pad)lx=pad+half;
+if(lx+half>W-pad)lx=W-pad-half;
+lines.forEach((l,i)=>{ctx.fillText(l,lx,top+i*lh);});
+return widest; // фактическая ширина самой длинной строки подписи
+}
+/* ===== ПАНЕЛЬ-СПИСОК ===== */
+try{(function(){
+  const btn=document.getElementById('menuBtn');
+  const panel=document.getElementById('panel');
+  const overlay=document.getElementById('panelOverlay');
+  const closeBtn=document.getElementById('panelClose');
+  const list=document.getElementById('panelList');
+  // строим список
+  const arrow='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  NAMES.forEach(name=>{
+    const link=LINKS[name]||'#';
+    const inactive=(link==='#');
+    const row=document.createElement('div');row.className='p-item'+(inactive?' p-inactive':'');
+    const nm=document.createElement('span');nm.className='p-name';nm.textContent=name;
+    const go2=document.createElement('a');go2.className='p-go'+(inactive?' p-soon':'');
+    go2.innerHTML=inactive?'Скоро':('Перейти'+arrow);
+    go2.href=(link&&link!=='#')?link:'#';
+    if(!inactive){go2.target='_blank';go2.rel='noopener';
+      go2.addEventListener('click',e=>{e.preventDefault();close();go(name,link);});}
+    else{go2.addEventListener('click',e=>e.preventDefault());}
+    // подсветка соответствующего шара
+    const planet=PLANETS.find(p=>p.name===name);
+    const hi=()=>{if(planet){hoverPlanet=planet;panelHover=planet;}};
+    const un=()=>{if(panelHover===planet){panelHover=null;}if(hoverPlanet===planet){hoverPlanet=null;}};
+    row.addEventListener('mouseenter',hi);
+    row.addEventListener('mouseleave',un);
+    // на тач-устройствах нет hover → подсвечиваем при касании строки
+    row.addEventListener('touchstart',hi,{passive:true});
+    row.appendChild(nm);row.appendChild(go2);list.appendChild(row);
+  });
+  function open(){panel.classList.add('open');overlay.classList.add('show');btn.classList.add('open');}
+  function close(){panel.classList.remove('open');overlay.classList.remove('show');btn.classList.remove('open');}
+  function toggle(){panel.classList.contains('open')?close():open();}
+  // Тач и клик не должны конфликтовать: если был touch, гасим последующий синтетический click
+  let _touched=false;
+  function markTouch(){_touched=true;setTimeout(()=>{_touched=false;},500);}
+  btn.addEventListener('click',()=>{if(_touched)return;toggle();});
+  closeBtn.addEventListener('click',()=>{if(_touched)return;close();});
+  overlay.addEventListener('click',()=>{if(_touched)return;close();});
+  btn.addEventListener('touchend',e=>{e.preventDefault();markTouch();toggle();},{passive:false});
+  closeBtn.addEventListener('touchend',e=>{e.preventDefault();markTouch();close();},{passive:false});
+  overlay.addEventListener('touchend',e=>{e.preventDefault();markTouch();close();},{passive:false});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+
+  // ===== Геймификация (десктоп): наведение на центральное лого открывает панель =====
+  if(!IS_TOUCH){
+    let hoverOpened=false;     // панель открыта именно ховером (а не кнопкой)
+    let overPanel=false;
+    panel.addEventListener('mouseenter',()=>{overPanel=true;});
+    panel.addEventListener('mouseleave',()=>{overPanel=false;});
+    document.addEventListener('mousemove',e=>{
+      if(typeof cx==='undefined'||typeof coreRadius==='undefined'||!coreRadius)return;
+      const d=Math.hypot(e.clientX-cx,e.clientY-cy);
+      if(d<coreRadius+40){
+        if(!panel.classList.contains('open')){open();hoverOpened=true;}
+      }else if(hoverOpened && d>coreRadius+170 && !overPanel){
+        close();hoverOpened=false;
+      }
+      if(!panel.classList.contains('open'))hoverOpened=false;
+    });
+  }
+
+  // ===== Привязка кнопок соцсетей =====
+  function wireSocial(id,url,label){
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(url&&url!=='#'){el.href=url;el.target='_blank';el.rel='noopener';}
+    else{
+      el.href='#';
+      el.addEventListener('click',e=>{e.preventDefault();alert(label+': вставьте ссылку в объект SOCIAL');});
+    }
+  }
+  wireSocial('waTop',SOCIAL.whatsapp,'WhatsApp');
+  wireSocial('waPanel',SOCIAL.whatsapp,'WhatsApp');
+})();}catch(e){}
+
+// ===== Логотип в шапке: точки извлечены 1-в-1 из фирменного лого (координаты/размер/цвет) =====
+try{(function buildBrandRing(){
+  const svg=document.querySelector('.brand-ring');
+  if(!svg)return;
+  const DOTS=[[38.75,12.94,0.8,'w'],[42.45,16.11,0.8,'w'],[44.65,20.25,0.8,'w'],[4.26,21.34,0.85,'r'],[4.0,28.53,0.95,'r'],[34.33,11.03,0.95,'w'],[5.64,36.02,1.1,'r'],[29.77,10.3,1.1,'w'],[25.36,10.85,1.15,'w'],[21.06,12.94,1.25,'w'],[9.7,42.79,1.3,'r'],[17.42,16.23,1.32,'w'],[15.12,20.28,1.42,'w'],[15.66,48.12,1.5,'r'],[13.92,24.83,1.57,'w'],[22.48,51.36,1.62,'r'],[14.04,29.36,1.65,'w'],[15.68,33.81,1.8,'w'],[30.02,52.34,1.86,'r'],[18.47,37.66,1.9,'w'],[37.43,51.37,1.98,'r'],[44.42,48.2,2.2,'r'],[50.27,42.78,2.38,'r'],[54.26,36.03,2.55,'r'],[56.0,28.76,2.72,'r'],[55.64,21.19,2.9,'r'],[53.17,14.0,3.1,'r'],[48.51,7.66,3.28,'r']];
+  for(const [x,y,r,col] of DOTS){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);
+    c.setAttribute('fill', col==='w' ? '#F2F3F5' : '#E01029');
+    svg.appendChild(c);
+  }
+})();}catch(e){}
+
+let started=false;
+function start(){if(started)return;started=true;
+try{resize();}catch(e){}
+try{coreRadius=IS_TOUCH?Math.max(46,MIN*0.115):Math.max(70,MIN*0.13);}catch(e){}
+try{seed();}catch(e){}
+try{requestAnimationFrame(frame);}catch(e){}
+setTimeout(()=>{var el=document.getElementById('intro');if(el)el.classList.add('hide');},900);}
+// Надёжный запуск: не зависим от fonts.ready (во встроенном WebView Telegram/WhatsApp он может не зарезолвиться)
+try{
+  if(document.fonts&&document.fonts.load){document.fonts.load("900 40px 'Montserrat'").then(start).catch(start);}
+}catch(e){}
+// Гарантированные фолбэки запуска
+setTimeout(start,600);
+window.addEventListener('load',start);
+if(document.readyState!=='loading')start();
+else document.addEventListener('DOMContentLoaded',start);
+setTimeout(()=>{var el=document.getElementById('intro');if(el)el.classList.add('hide');},2000);
+</script>
+</body>
+</html>
+
