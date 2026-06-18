@@ -38,7 +38,7 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
 .intro.hide{opacity:0;visibility:hidden;pointer-events:none;}
 .intro-core{width:14px;height:14px;border-radius:50%;background:var(--red-bright);box-shadow:0 0 40px 8px var(--red-bright);animation:pulse 1.4s ease-in-out infinite;}
 @keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(2.4);opacity:1}}
-.hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;color:var(--white);font-size:12px;letter-spacing:.42em;text-transform:uppercase;font-weight:600;opacity:0;animation:hintpulse 2.6s ease-in-out infinite, fadeIn 1s ease forwards 2.4s;text-align:center;}
+.hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;color:var(--white);font-size:clamp(9px,2.6vw,12px);letter-spacing:.14em;white-space:nowrap;text-transform:uppercase;font-weight:600;opacity:0;animation:hintpulse 2.6s ease-in-out infinite, fadeIn 1s ease forwards 2.4s;text-align:center;}
 @keyframes fadeIn{to{opacity:1}}
 @keyframes hintpulse{0%,100%{opacity:.45}50%{opacity:.9}}
 .brand{position:absolute;left:50%;top:20px;transform:translateX(-50%);z-index:5;display:flex;flex-direction:column;align-items:center;gap:7px;opacity:0;animation:bfade 1s ease forwards 2.1s;}
@@ -134,8 +134,7 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
   <svg class="brand-ring" viewBox="0 0 60 60" width="46" height="46" aria-hidden="true"></svg>
   <span class="brand-name">СИСТЕМА <b>ОП</b></span>
 </div>
-<div class="hint">Нажмите на круг</div>
-<div style="position:fixed;right:8px;bottom:6px;z-index:50;color:rgba(255,80,100,0.5);font:600 9px monospace;letter-spacing:.05em;">v9 · рамка-края</div>
+<div class="hint">Нажмите на нужный объект</div>
 
 <!-- кнопка-гамбургер -->
 <button id="menuBtn" class="menu-btn" aria-label="Меню">
@@ -214,14 +213,14 @@ window.addEventListener('orientationchange',()=>{resize();setTimeout(resize,300)
 if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);
 /* ---------- ПЛАНЕТЫ (12) — планетарные орбиты ---------- */
 const NAMES=[
-'Усиление ОП','Панель управления для РОПов','Бот-помощник','Блог о продажах в Threads',
+'Усиление отделов продаж','Панель управления для РОПов','Бот-помощник','Блог о продажах в Threads',
 'Библиотека кейсов','Партнёрская программа','Компании-партнёры','Ассоциация системных продаж',
 'Платформа участников ассоциации','Книга «Отдел продаж. Другой подход»','Библиотека отзывов','Библиотека аудитов',
 'Инвестиционная программа'
 ];
 /* ===== ССЫЛКИ РАЗДЕЛОВ — впиши сюда реальные URL (пока заглушки '#') ===== */
 const LINKS={
-  'Усиление ОП':'#',
+  'Усиление отделов продаж':'#',
   'Панель управления для РОПов':'#',
   'Бот-помощник':'#',
   'Блог о продажах в Threads':'#',
@@ -257,20 +256,26 @@ let coreRadius=0;
 function seed(){
 PLANETS.forEach((p,i)=>{
 if(IS_TOUCH){
-// МОБИЛЬНЫЙ: орбитальная раскладка — шары распределены по ВСЕЙ площади экрана
-const ring=Math.min(W,H);
-p.orbAng=(i/PLANETS.length)*Math.PI*2 + (Math.random()-0.5)*0.5;     // стартовый угол (равномерно + лёгкий разброс)
-// радиусы в широком диапазоне (от близких к центру до дальних к краям) → заполняем весь экран
-p.orbRad=ring*(0.26+ (i%4)*0.13 + Math.random()*0.08);
-// орбита эллиптическая: по вертикали растянута (экран высокий) → шары идут и вверху, и внизу
-p.orbStretchY=1.45+Math.random()*0.35;
-p.orbSpin=(0.000045+Math.random()*0.00007)*(Math.random()<0.5?-1:1); // МЕДЛЕННО, направление случайно → хаос
-p.orbWobAmp=ring*(0.025+Math.random()*0.035);                       // амплитуда «дыхания» радиуса
-p.orbWobSpd=0.0003+Math.random()*0.0004;
-p.orbWobPh=Math.random()*Math.PI*2;
-// начальная позиция на орбите
-p.x=cx+Math.cos(p.orbAng)*p.orbRad;
-p.y=cy+Math.sin(p.orbAng)*p.orbRad*(1.45);
+// МОБИЛЬНЫЙ (FREE-PREMIUM): стартуем на домашних точках «ореола-овала», чтобы раскладка
+// устаканивалась чисто (тот же закон, что и в updatePlanets).
+const topSafe=(window.__safeTop||0), botSafe=(window.__safeBot||0);
+const T=128+topSafe, B=H-96-botSafe;
+const span=(B-T), cxv=cx;
+const Rx=W*0.40, RxMin=W*0.135;
+const fr=[0.10,0.30,0.50,0.685,0.87,1.0];
+const xr=f=>RxMin+(Rx-RxMin)*Math.sin(f*Math.PI);
+const pr=fr.map(f=>({y:T+span*f,dx:xr(f)}));
+const sp=[
+ [cxv,T],
+ [cxv-pr[0].dx,pr[0].y],[cxv+pr[0].dx,pr[0].y],
+ [cxv-pr[1].dx,pr[1].y],[cxv+pr[1].dx,pr[1].y],
+ [cxv-pr[2].dx,pr[2].y],[cxv+pr[2].dx,pr[2].y],
+ [cxv-pr[3].dx,pr[3].y],[cxv+pr[3].dx,pr[3].y],
+ [cxv-pr[4].dx,pr[4].y],[cxv+pr[4].dx,pr[4].y],
+ [cxv-pr[5].dx,pr[5].y],[cxv+pr[5].dx,pr[5].y]
+];
+const s=sp[i]||[cxv,(T+B)/2];
+p.x=s[0]; p.y=s[1];
 p.vx=0;p.vy=0;
 return;
 }
@@ -468,49 +473,68 @@ if(IS_TOUCH){
   const T=128+topSafe;                // верхний ряд (под брендом)
   const B=H-96-botSafe;               // нижний ряд (над подсказкой)
   if(!window.__grid){
-    // 13 точек по рамке: углы + промежуточные. Доли по периметру.
-    // верх: 3 (лево-верх угол, центр-верх, право-верх угол)
-    // право: 2 промежуточных
-    // низ: 3 (право-низ угол, центр-низ, лево-низ угол)
-    // лево: 2 промежуточных
-    // + 3 «средних» на половине высоты у бортов и сверху-центр уже есть → добираем до 13
-    const midY1=T+(B-T)*0.34, midY2=T+(B-T)*0.66, midY=T+(B-T)*0.5;
-    const cxv=W*0.5, cl=W*0.04, crr=W*0.96;
+    // ===== FREE-PREMIUM: симметричный «ореол-овал» — 6 зеркальных пар по эллипсу + 1 корона =====
+    // Билатеральная симметрия относительно вертикальной оси cx (каждая пара — точное зеркало по x).
+    // x каждой пары лежит на полуэллипсе: узко у верх/низа, ШИРОКО у экватора (уровень лого) →
+    // узлы у лого далеко от центра, их подписи не лезут на логотип. Всё от W/H → масштабируется.
+    const usableTop = T;                         // верхняя безопасная линия (под брендом)
+    const usableBot = B;                         // нижняя безопасная линия (над подсказкой)
+    const span      = (usableBot-usableTop);
+    const midY      = (usableTop+usableBot)/2;   // экватор ≈ cy
+    const cxv       = cx;
+    const Rx        = W*0.40;                     // макс. горизонтальный радиус (у экватора)
+    const RxMin     = W*0.135;                    // мин. горизонтальный радиус (у верх/низа)
+    // 6 вертикальных уровней пар, равномерно по высоте рабочей зоны (увеличенные зазоры)
+    const fr = [0.10, 0.30, 0.50, 0.685, 0.87, 1.0];
+    // горизонтальный радиус по уровню: эллипс, максимум у экватора (fr≈0.5)
+    function xr(f){ const e=Math.sin(f*Math.PI); return RxMin + (Rx-RxMin)*e; }
+    const pairs = fr.map(f=>({ y: usableTop + span*f, dx: xr(f) }));
+    // карта индекс→позиция. Длинные подписи (8 «Платформа…», 9 «Книга…») кладём на ряды с запасом.
+    // pts[0] — корона на оси; затем зеркальные пары L/R.
     const pts=[
-      {x:L,      y:T},                 // 0 лево-верх угол
-      {x:cxv,    y:T},                 // 1 центр-верх
-      {x:R,      y:T},                 // 2 право-верх угол
-      {x:cl,     y:midY1},             // 3 левый борт верх
-      {x:crr,    y:midY1},             // 4 правый борт верх
-      {x:cl,     y:midY},              // 5 левый борт центр
-      {x:crr,    y:midY},              // 6 правый борт центр
-      {x:cl,     y:midY2},             // 7 левый борт низ
-      {x:crr,    y:midY2},             // 8 правый борт низ
-      {x:L,      y:B},                 // 9 лево-низ угол
-      {x:cxv,    y:B-(B-T)*0.07},       // 10 центр-низ (чуть выше)
-      {x:R,      y:B},                 // 11 право-низ угол
-      {x:cxv,    y:H-58}               // 12 самый низ-центр (у подсказки)
+      {x:cxv,                 y:usableTop},               // 0  корона (на оси, сверху)
+      {x:cxv - pairs[0].dx,   y:pairs[0].y},              // 1  верх-лево
+      {x:cxv + pairs[0].dx,   y:pairs[0].y},              // 2  верх-право
+      {x:cxv - pairs[1].dx,   y:pairs[1].y},              // 3  верх-середина лево
+      {x:cxv + pairs[1].dx,   y:pairs[1].y},              // 4  верх-середина право
+      {x:cxv - pairs[2].dx,   y:pairs[2].y},              // 5  экватор лево (широко)
+      {x:cxv + pairs[2].dx,   y:pairs[2].y},              // 6  экватор право (широко)
+      {x:cxv - pairs[3].dx,   y:pairs[3].y},              // 7  низ-середина лево
+      {x:cxv + pairs[3].dx,   y:pairs[3].y},              // 8  низ-середина право
+      {x:cxv - pairs[4].dx,   y:pairs[4].y},              // 9  низ-лево
+      {x:cxv + pairs[4].dx,   y:pairs[4].y},              // 10 низ-право
+      {x:cxv - pairs[5].dx,   y:pairs[5].y},              // 11 нижняя лево
+      {x:cxv + pairs[5].dx,   y:pairs[5].y}               // 12 нижняя право
     ];
+    // гарантируем зазор центра ≥ ~104px от лого
+    const clearC=Math.max(104, coreRadius+60);
     PLANETS.forEach((p,i)=>{
-      const g=pts[i]||{x:cxv,y:midY};
-      p._homeX=g.x; p._homeY=g.y;
+      let g=pts[i]||{x:cxv,y:midY};
+      let gx=g.x, gy=g.y;
+      const d=Math.hypot(gx-cx,gy-cy);
+      if(d<clearC){ const a=Math.atan2(gy-cy,gx-cx)||0; gx=cx+Math.cos(a)*clearC; gy=cy+Math.sin(a)*clearC; }
+      p._homeX=gx; p._homeY=gy;
+      // спокойное, очень мелкое «дыхание» — премиальная сдержанность
       p._dphase=Math.random()*Math.PI*2;
-      p._dspd=0.0004+Math.random()*0.0003;
-      p._damp=7+Math.random()*5;       // амплитуда живого покачивания
+      p._dspd=0.00026+Math.random()*0.00014;
+      p._damp=2.8+Math.random()*1.6;     // маленькая амплитуда → дорого/спокойно
       p._dax=Math.random()*Math.PI*2;
+      // ряды НИЖЕ экватора подписываем НАД шаром (чтобы не задеть подсказку/соседей);
+      // экватор и верх — подпись ПОД шаром. Так в каждом «зазоре» между рядами только одна подпись.
+      p._labelUp = (gy > midY + span*0.03);
     });
     window.__grid=1;
   }
   PLANETS.forEach((p)=>{
     if(p===dragPlanet)return;
-    // лёгкое живое покачивание вокруг точки на краю (по обеим осям, эллиптично)
+    // лёгкое живое покачивание вокруг домашней точки (эллиптично, спокойно)
     const tx=p._homeX+Math.cos(nowG*p._dspd+p._dphase)*p._damp;
-    const ty=p._homeY+Math.sin(nowG*p._dspd*1.15+p._dax)*p._damp;
+    const ty=p._homeY+Math.sin(nowG*p._dspd*1.15+p._dax)*p._damp*0.8;
     p.x+=(tx-p.x)*0.05*k;
     p.y+=(ty-p.y)*0.05*k;
-    const m=p.size+5;
+    const m=p.size+6;
     if(p.x<m)p.x=m; if(p.x>W-m)p.x=W-m;
-    if(p.y<T-30)p.y=T-30; if(p.y>H-50)p.y=H-50;
+    if(p.y<T-20)p.y=T-20; if(p.y>B+20)p.y=B+20;
   });
   return;
 }
@@ -603,8 +627,23 @@ ctx.restore();
 // тонкий светящийся ободок
 ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);
 ctx.strokeStyle=inactive?`rgba(190,195,205,${isHover?0.45:0.18})`:`rgba(255,140,155,${isHover?0.7:0.22})`;ctx.lineWidth=1;ctx.stroke();
-// подпись — строго под шаром, аккуратный капс с разрядкой
-const labelTop=p.y+(p.maxSize||sz)+(IS_TOUCH?7:15);
+// подпись — аккуратный капс с разрядкой. На мобильном нижние узлы подписываем НАД шаром,
+// чтобы не было перекрытия с подсказкой/соседями (флаг _labelUp выставлен в updatePlanets).
+const nodeR=(p.maxSize||sz);
+let labelTop;
+if(IS_TOUCH && p._labelUp){
+  // считаем высоту подписи (1–2 строки по 10px), ставим её НАД шаром
+  const lh=10, nameU=(p.name||'').toUpperCase();
+  ctx.save();
+  ctx.font=((isHover||isPanel)?'700 ':'500 ')+(isPanel?(IS_TOUCH?8.5:12):(IS_TOUCH?7.5:11))+"px 'Montserrat', sans-serif";
+  const maxW=Math.min(120, W*0.34); let line='',lines=0;
+  for(const w of nameU.split(' ')){const t=line?line+' '+w:w; if(ctx.measureText(t).width>maxW&&line){lines++;line=w;}else line=t;}
+  if(line)lines++;
+  ctx.restore();
+  labelTop = p.y - nodeR - 6 - lines*lh;
+}else{
+  labelTop = p.y + nodeR + (IS_TOUCH?7:15);
+}
 ctx.textAlign='center';ctx.textBaseline='top';
 // размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
 const fsBase=IS_TOUCH?7.5:11, fsPanel=IS_TOUCH?8.5:12;
