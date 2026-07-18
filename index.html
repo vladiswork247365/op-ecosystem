@@ -132,6 +132,29 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
 .p-item.p-featured .p-name::before{content:'★ ';color:#ff6478;}
 .p-item.p-featured .p-go{box-shadow:0 0 12px rgba(224,16,41,0.55);}
 @keyframes featPulse{0%,100%{box-shadow:0 0 12px rgba(224,16,41,0.28),inset 0 0 10px rgba(224,16,41,0.08);}50%{box-shadow:0 0 26px rgba(224,16,41,0.6),inset 0 0 14px rgba(224,16,41,0.16);}}
+/* ===== МОБИЛЬНАЯ ШАПКА: мельче и аккуратнее ===== */
+@media (max-width:600px){
+  .brand{top:13px;gap:5px;}
+  .brand-ring{width:38px;height:38px;}
+  .brand-name{font-size:10px;letter-spacing:.22em;}
+  .menu-btn{top:12px;left:12px;width:38px;height:38px;border-radius:11px;}
+  .menu-btn span{width:16px;}
+  .social-top{top:12px;right:12px;gap:6px;}
+  .social-btn{height:34px;border-radius:18px;padding:0 12px 0 9px;gap:6px;}
+  .social-btn svg{width:16px;height:16px;}
+  .wa-label{font-size:7px;letter-spacing:.1em;}
+  .hint{font-size:8.5px;bottom:20px;letter-spacing:.18em;}
+}
+/* ===== одноразовая мобильная подсказка ===== */
+.mob-hint{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:26px;background:rgba(6,2,4,0.74);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);opacity:0;transition:opacity .35s ease;}
+.mob-hint.show{display:flex;opacity:1;}
+.mob-hint-card{max-width:330px;width:100%;background:linear-gradient(160deg,#1b0d12,#0b0608);border:1px solid rgba(255,90,110,0.38);border-radius:22px;padding:32px 26px 26px;text-align:center;box-shadow:0 22px 60px rgba(0,0,0,0.6),0 0 46px rgba(224,16,41,0.22);animation:mhpop .5s cubic-bezier(.2,.9,.3,1.3);}
+@keyframes mhpop{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}
+.mob-hint-ico{font-size:38px;margin-bottom:14px;line-height:1;}
+.mob-hint-text{color:#f2f3f5;font-size:15px;line-height:1.6;font-weight:500;margin:0 0 24px;}
+.mob-hint-text b{color:var(--red-bright);font-weight:800;}
+.mob-hint-ok{appearance:none;-webkit-appearance:none;border:none;cursor:pointer;background:linear-gradient(90deg,#e0102a,#ff2f45);color:#fff;font-weight:800;font-size:15px;letter-spacing:.12em;padding:13px 46px;border-radius:14px;box-shadow:0 10px 26px rgba(224,16,41,0.5);transition:transform .15s ease,filter .15s ease;}
+.mob-hint-ok:active{transform:scale(.95);filter:brightness(1.1);}
 </style>
 </head>
 <body>
@@ -170,6 +193,14 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
   <div id="panelList" class="panel-list"></div>
 </aside>
 <div id="panelOverlay" class="panel-overlay"></div>
+<!-- одноразовая подсказка для мобильных: «зайдите с ноутбука» -->
+<div id="mobHint" class="mob-hint" role="dialog" aria-modal="true">
+  <div class="mob-hint-card">
+    <div class="mob-hint-ico">💻✨</div>
+    <p class="mob-hint-text">Если зайти через <b>ноутбук</b>, эмоций от сайта экосистемы будет в <b>100&nbsp;раз больше</b> =)</p>
+    <button id="mobHintOk" class="mob-hint-ok" type="button">ОК</button>
+  </div>
+</div>
 </div>
 <div class="intro" id="intro"><div class="intro-core"></div></div>
 <script>
@@ -661,7 +692,7 @@ if(IS_TOUCH && p._labelUp){
   // считаем высоту подписи (1–2 строки по 10px), ставим её НАД шаром
   const lh=10, nameU=(p.name||'').toUpperCase();
   ctx.save();
-  ctx.font=((isHover||isPanel)?'700 ':'500 ')+(isPanel?(IS_TOUCH?8.5:12):(IS_TOUCH?7.5:11))+"px 'Montserrat', sans-serif";
+  ctx.font=((isHover||isPanel)?'700 ':'500 ')+(isPanel?(IS_TOUCH?8:12):(IS_TOUCH?7:11))+"px 'Montserrat', sans-serif";
   const maxW=Math.min(120, W*0.34); let line='',lines=0;
   for(const w of nameU.split(' ')){const t=line?line+' '+w:w; if(ctx.measureText(t).width>maxW&&line){lines++;line=w;}else line=t;}
   if(line)lines++;
@@ -672,7 +703,7 @@ if(IS_TOUCH && p._labelUp){
 }
 ctx.textAlign='center';ctx.textBaseline='top';
 // размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
-const fsBase=IS_TOUCH?7.5:11, fsPanel=IS_TOUCH?8.5:12;
+const fsBase=IS_TOUCH?7:11, fsPanel=IS_TOUCH?8:12;
 ctx.font=((isHover||isPanel||featured)?'700 ':'500 ')+((isPanel||featured)?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
 // неактивные — приглушённая серая подпись
 ctx.fillStyle=inactive?((isHover||isPanel)?'rgba(200,205,213,0.78)':'rgba(150,155,165,0.5)')
@@ -856,6 +887,17 @@ window.addEventListener('load',start);
 if(document.readyState!=='loading')start();
 else document.addEventListener('DOMContentLoaded',start);
 setTimeout(()=>{var el=document.getElementById('intro');if(el)el.classList.add('hide');},2000);
+// ===== Одноразовая мобильная подсказка (показывается один раз на тач-устройствах) =====
+try{(function(){
+  if(!IS_TOUCH) return;
+  var KEY='op_eco_mobile_hint_v1';
+  try{ if(localStorage.getItem(KEY)) return; }catch(e){}
+  var m=document.getElementById('mobHint'); if(!m) return;
+  var ok=document.getElementById('mobHintOk');
+  function close(){ m.classList.remove('show'); setTimeout(function(){m.style.display='none';},360); }
+  if(ok){ ok.addEventListener('click',close); ok.addEventListener('touchend',function(e){e.preventDefault();close();},{passive:false}); }
+  setTimeout(function(){ m.classList.add('show'); try{localStorage.setItem(KEY,'1');}catch(e){} }, 1300);
+})();}catch(e){}
 </script>
 </body>
 </html>
