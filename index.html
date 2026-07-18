@@ -125,6 +125,13 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
 .p-item.p-inactive .p-name{color:rgba(160,165,175,0.55);}
 .p-go.p-soon{background:none;border:1px solid rgba(160,165,175,0.25);color:rgba(160,165,175,0.55);cursor:default;}
 .p-go.p-soon:hover{filter:none;transform:none;}
+/* выделенный раздел в списке — пульсирующая подсветка, чтобы сразу бросался в глаза */
+.p-item.p-featured{background:linear-gradient(90deg,rgba(224,16,41,0.22),rgba(224,16,41,0.05));border:1.5px solid rgba(255,90,110,0.85);animation:featPulse 2.1s ease-in-out infinite;}
+.p-item.p-featured:hover{transform:translateX(3px);border-color:rgba(255,110,130,1);}
+.p-item.p-featured .p-name{color:#fff;font-weight:800;}
+.p-item.p-featured .p-name::before{content:'★ ';color:#ff6478;}
+.p-item.p-featured .p-go{box-shadow:0 0 12px rgba(224,16,41,0.55);}
+@keyframes featPulse{0%,100%{box-shadow:0 0 12px rgba(224,16,41,0.28),inset 0 0 10px rgba(224,16,41,0.08);}50%{box-shadow:0 0 26px rgba(224,16,41,0.6),inset 0 0 14px rgba(224,16,41,0.16);}}
 </style>
 </head>
 <body>
@@ -219,6 +226,7 @@ const NAMES=[
 'Блог о системе в отделе продаж','Менторство для РОП-ов','Инвестиционная программа','Библиотека кейсов',
 'Библиотека отзывов','Библиотека аудитов'
 ];
+const FEATURED='Панель управления для РОПов'; // раздел, который визуально выделяем везде
 /* ===== ССЫЛКИ РАЗДЕЛОВ — впиши сюда реальные URL (пока заглушки '#') ===== */
 const LINKS={
   'Усиление отделов продаж':'https://usilenie.systemop.top',
@@ -583,20 +591,33 @@ function drawPlanet(p,now){
 const isHover=(hoverPlanet===p||dragPlanet===p);
 const isPanel=(panelHover===p);
 const inactive=(!p.link||p.link==='#'); // нет сайта → серый, некликабельный вид
-let sz=p.size;if(isPanel)sz*=1.6;else if(isHover)sz*=1.12;
+const featured=(typeof FEATURED!=='undefined'&&p.name===FEATURED); // выделенный раздел — всегда цепляет взгляд
+let sz=p.size;if(featured)sz*=1.32;if(isPanel)sz*=1.6;else if(isHover)sz*=1.12;
 // пульсирующее кольцо-маркер при наведении из панели
 if(isPanel){
   const ringR=sz*1.9+6*Math.sin(now*0.012);
   ctx.beginPath();ctx.arc(p.x,p.y,ringR,0,Math.PI*2);
   ctx.strokeStyle=inactive?'rgba(170,175,185,0.7)':'rgba(255,90,110,0.9)';ctx.lineWidth=2;ctx.stroke();
 }
+// ВЫДЕЛЕНИЕ раздела: постоянный «радар-пинг» + яркое кольцо, чтобы сразу бросался в глаза
+if(featured){
+  const c1=(now*0.0013)%1, c2=(c1+0.5)%1;
+  [c1,c2].forEach((t,i)=>{
+    const pr=sz*1.5+t*sz*2.6;
+    ctx.beginPath();ctx.arc(p.x,p.y,pr,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,'+(100+i*25)+',120,'+(0.55*(1-t)).toFixed(3)+')';ctx.lineWidth=2.5*(1-t)+0.4;ctx.stroke();
+  });
+  const rr=sz*1.34+2.5*Math.sin(now*0.006);
+  ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,150,165,0.92)';ctx.lineWidth=2;ctx.stroke();
+}
 // мягкая опорная тень под сферой — добавляет вес и "дороговизну"
 const sh=ctx.createRadialGradient(p.x,p.y+sz*0.2,0,p.x,p.y+sz*0.2,sz*1.5);
 sh.addColorStop(0,'rgba(0,0,0,0.35)');sh.addColorStop(1,'rgba(0,0,0,0)');
 ctx.beginPath();ctx.arc(p.x,p.y+sz*0.2,sz*1.5,0,Math.PI*2);ctx.fillStyle=sh;ctx.fill();
 // внешнее свечение (ореол): у неактивных — слабое серое
-const glowA=isPanel?0.8:(isHover?0.5:0.24);
-const glowR=isPanel?sz*3.4:sz*2.8;
+const glowA=isPanel?0.85:(isHover?0.5:(featured?0.62:0.24));
+const glowR=(isPanel||featured)?sz*3.4:sz*2.8;
 const pg=ctx.createRadialGradient(p.x,p.y,sz*0.6,p.x,p.y,glowR);
 if(inactive){pg.addColorStop(0,`rgba(150,155,165,${glowA*0.35})`);pg.addColorStop(1,'rgba(120,125,135,0)');}
 else{pg.addColorStop(0,`rgba(255,30,55,${glowA})`);pg.addColorStop(1,'rgba(224,16,41,0)');}
@@ -634,7 +655,7 @@ ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);
 ctx.strokeStyle=inactive?`rgba(190,195,205,${isHover?0.45:0.18})`:`rgba(255,140,155,${isHover?0.7:0.22})`;ctx.lineWidth=1;ctx.stroke();
 // подпись — аккуратный капс с разрядкой. На мобильном нижние узлы подписываем НАД шаром,
 // чтобы не было перекрытия с подсказкой/соседями (флаг _labelUp выставлен в updatePlanets).
-const nodeR=(p.maxSize||sz);
+const nodeR=(p.maxSize||sz)*(featured?1.32:1);
 let labelTop;
 if(IS_TOUCH && p._labelUp){
   // считаем высоту подписи (1–2 строки по 10px), ставим её НАД шаром
@@ -652,11 +673,11 @@ if(IS_TOUCH && p._labelUp){
 ctx.textAlign='center';ctx.textBaseline='top';
 // размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
 const fsBase=IS_TOUCH?7.5:11, fsPanel=IS_TOUCH?8.5:12;
-ctx.font=((isHover||isPanel)?'700 ':'500 ')+(isPanel?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
+ctx.font=((isHover||isPanel||featured)?'700 ':'500 ')+((isPanel||featured)?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
 // неактивные — приглушённая серая подпись
 ctx.fillStyle=inactive?((isHover||isPanel)?'rgba(200,205,213,0.78)':'rgba(150,155,165,0.5)')
-                      :((isHover||isPanel)?'#FFFFFF':'rgba(238,240,243,0.85)');
-ctx.shadowColor=isPanel?(inactive?'rgba(120,125,135,0.6)':'rgba(255,30,55,0.9)'):'rgba(0,0,0,0.95)';ctx.shadowBlur=isPanel?14:7;
+                      :((isHover||isPanel||featured)?'#FFFFFF':'rgba(238,240,243,0.85)');
+ctx.shadowColor=(isPanel||featured)?(inactive?'rgba(120,125,135,0.6)':'rgba(255,30,55,0.9)'):'rgba(0,0,0,0.95)';ctx.shadowBlur=(isPanel||featured)?14:7;
 const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?10:15);
 p.labelHalf=Math.max(p.labelHalf||0, lw/2); // запоминаем фактическую полуширину подписи
 ctx.shadowBlur=0;
@@ -730,7 +751,7 @@ try{(function(){
   NAMES.forEach(name=>{
     const link=LINKS[name]||'#';
     const inactive=(link==='#');
-    const row=document.createElement('div');row.className='p-item'+(inactive?' p-inactive':'');
+    const row=document.createElement('div');row.className='p-item'+(inactive?' p-inactive':'')+((typeof FEATURED!=='undefined'&&name===FEATURED)?' p-featured':'');
     const nm=document.createElement('span');nm.className='p-name';nm.textContent=name;
     const go2=document.createElement('a');go2.className='p-go'+(inactive?' p-soon':'');
     go2.innerHTML=inactive?'Скоро':('Перейти'+arrow);
