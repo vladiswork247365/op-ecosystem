@@ -75,8 +75,12 @@ filter:blur(20px);animation:drift 26s ease-in-out infinite alternate;}
 .social-btn svg{width:22px;height:22px;fill:var(--white);display:block;flex-shrink:0;}
 .wa-label{color:var(--white);font-size:8.5px;font-weight:800;letter-spacing:.13em;line-height:1.3;text-align:left;white-space:nowrap;}
 /* «ОТДЕЛ ПРОДАЖ» — заметный, но спокойный акцент (мягче, чем пульс Панели управления) */
-#waTop.social-btn{animation:wapulse 3.4s ease-in-out infinite;}
-@keyframes wapulse{0%,100%{box-shadow:0 0 12px rgba(224,16,41,0.22);}50%{box-shadow:0 0 22px rgba(224,16,41,0.44);}}
+#waTop.social-btn{animation:wapulse 3s ease-in-out infinite;}
+@keyframes wapulse{0%,100%{box-shadow:0 0 12px rgba(224,16,41,0.24);}50%{box-shadow:0 0 24px rgba(224,16,41,0.5);}}
+/* нативное «мерцание» — блик света пробегает по кнопке и притягивает взгляд */
+.social-btn{position:relative;overflow:hidden;}
+.social-btn::after{content:'';position:absolute;top:0;bottom:0;left:-65%;width:38%;background:linear-gradient(105deg,transparent 0%,rgba(255,255,255,0.55) 50%,transparent 100%);transform:skewX(-16deg);pointer-events:none;z-index:2;animation:washine 3s ease-in-out infinite;}
+@keyframes washine{0%{left:-65%;}42%{left:150%;}100%{left:150%;}}
 /* версия для шапки панели — чуть компактнее */
 .social-panel{display:flex;gap:9px;align-items:center;}
 .social-panel .social-btn{height:38px;padding:0 11px 0 8px;gap:7px;}
