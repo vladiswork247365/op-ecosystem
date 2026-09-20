@@ -483,12 +483,12 @@ const FADE=Math.max(420,MIN*0.7);
 for(let i=0;i<PLANETS.length;i++)for(let j=i+1;j<PLANETS.length;j++){
 const a=PLANETS[i],b=PLANETS[j];
 const d=Math.hypot(b.x-a.x,b.y-a.y);
-const al=IS_TOUCH?Math.max(0.025,(1-d/FADE)*0.20):Math.max(0.06,(1-d/FADE)*0.5);
+const al=IS_TOUCH?Math.max(0.05,(1-d/FADE)*0.34):Math.max(0.06,(1-d/FADE)*0.5);
 const g=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
 g.addColorStop(0,`rgba(255,60,82,${al})`);
 g.addColorStop(0.5,`rgba(224,16,41,${al*0.6})`);
 g.addColorStop(1,`rgba(255,60,82,${al})`);
-ctx.strokeStyle=g;ctx.lineWidth=al>0.2?1:0.6;ctx.beginPath();
+ctx.strokeStyle=g;ctx.lineWidth=IS_TOUCH?0.7:(al>0.2?1:0.6);ctx.beginPath();
 ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
 }
 // линии от центра-лого к каждому шару — постоянная связь с ядром
