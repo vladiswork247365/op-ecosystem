@@ -316,7 +316,7 @@ if(IS_TOUCH){
 const topSafe=(window.__safeTop||0), botSafe=(window.__safeBot||0);
 const T=128+topSafe, B=H-96-botSafe;
 const span=(B-T), cxv=cx;
-const Rx=W*0.40, RxMin=W*0.135;
+const Rx=W*0.40, RxMin=W*0.24;
 const fr=[0.10,0.30,0.50,0.685,0.87,1.0];
 const xr=f=>RxMin+(Rx-RxMin)*Math.sin(f*Math.PI);
 const pr=fr.map(f=>({y:T+span*f,dx:xr(f)}));
@@ -370,14 +370,17 @@ setInterval(()=>{if(Math.random()<0.4)spawnBuck();},2600); // реже и не �
 let mouseX=0,mouseY=0,tMouseX=0,tMouseY=0;
 let hoverPlanet=null,dragPlanet=null,panelHover=null;
 const stageEl=document.getElementById('stage');
+// ЗАЩИТА: меню и кнопки лежат ВНУТРИ #stage. Без этой проверки тап по ним
+// «проваливается» на холст и открывает планету, оказавшуюся под кнопкой.
+function fromUI(e){var t=e&&e.target;return !!(t&&t.closest&&t.closest('#panel,#panelOverlay,.menu-btn,.social-top,.mob-hint'));}
 // радиус попадания: на тач-устройствах палец крупнее курсора → увеличиваем зону
 function hitRadius(p){return p.size+(IS_TOUCH?34:16);}
-stageEl.addEventListener('mousemove',e=>{tMouseX=(e.clientX/W-0.5);tMouseY=(e.clientY/H-0.5);pointer(e.clientX,e.clientY);});
-stageEl.addEventListener('mousedown',e=>onDown(e.clientX,e.clientY));
-window.addEventListener('mouseup',e=>onUp(e&&e.clientX,e&&e.clientY));
-stageEl.addEventListener('touchmove',e=>{const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);pointer(t.clientX,t.clientY);if(dragPlanet)e.preventDefault();},{passive:false});
-stageEl.addEventListener('touchstart',e=>{const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);onDown(t.clientX,t.clientY);},{passive:true});
-stageEl.addEventListener('touchend',e=>{const t=(e.changedTouches&&e.changedTouches[0]);onUp(t&&t.clientX,t&&t.clientY);},{passive:true});
+stageEl.addEventListener('mousemove',e=>{if(fromUI(e))return;tMouseX=(e.clientX/W-0.5);tMouseY=(e.clientY/H-0.5);pointer(e.clientX,e.clientY);});
+stageEl.addEventListener('mousedown',e=>{if(fromUI(e))return;onDown(e.clientX,e.clientY);});
+window.addEventListener('mouseup',e=>{if(fromUI(e)){dragPlanet=null;return;}onUp(e&&e.clientX,e&&e.clientY);});
+stageEl.addEventListener('touchmove',e=>{if(fromUI(e))return;const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);pointer(t.clientX,t.clientY);if(dragPlanet)e.preventDefault();},{passive:false});
+stageEl.addEventListener('touchstart',e=>{if(fromUI(e))return;const t=e.touches[0];if(!t)return;tMouseX=(t.clientX/W-0.5);tMouseY=(t.clientY/H-0.5);onDown(t.clientX,t.clientY);},{passive:true});
+stageEl.addEventListener('touchend',e=>{if(fromUI(e)){dragPlanet=null;return;}const t=(e.changedTouches&&e.changedTouches[0]);onUp(t&&t.clientX,t&&t.clientY);},{passive:true});
 stageEl.addEventListener('touchcancel',()=>onUp(),{passive:true});
 let nowG=0;
 function pointer(px,py){
@@ -420,7 +423,8 @@ function go(name,link){
   }
   else{alert('Раздел: '+name+'\n(вставьте ссылку в объект LINKS)');}
 }
-function activate(p){if(!p.link||p.link==='#')return;go(p.name,p.link);} // серые (без сайта) не кликаются
+let _lastAct=0;
+function activate(p){if(!p.link||p.link==='#')return;const t=Date.now();if(t-_lastAct<800)return;_lastAct=t;go(p.name,p.link);} // серые (без сайта) не кликаются
 let t0=performance.now();
 function frame(now){
 requestAnimationFrame(frame); // следующий кадр планируем ПЕРВЫМ — цикл не умирает от ошибок ниже
@@ -512,8 +516,12 @@ for(const p of order){try{drawPlanet(p,now);}catch(e){}}
 }
 function updatePlanets(k){
 coreRadius=IS_TOUCH?Math.max(40,MIN*0.10):Math.max(64,MIN*0.15);
-const szMul=IS_TOUCH?0.62:1;  // шары ещё мельче на мобильном
+const szMul=IS_TOUCH?0.62:1;
+// МОБИЛЬНЫЙ: все круги СТРОГО одного размера, дыхание синхронное (без разнобоя)
+const mobR=Math.max(11,Math.min(15,MIN*0.037));
+const mobPulse=1+0.05*Math.sin(nowG*0.0013);
 for(const p of PLANETS){
+if(IS_TOUCH){p.size=mobR*mobPulse;p.maxSize=mobR*1.12;continue;}
 const pulse=1+0.26*Math.sin(nowG*p.pulseSpeed+p.pulsePhase);
 p.size=p.baseSize*pulse*szMul;
 p.maxSize=p.baseSize*1.26*1.15*szMul;
@@ -525,8 +533,8 @@ if(IS_TOUCH){
   const botSafe=(window.__safeBot||0);
   const L=W*0.085;                    // левая колонка
   const R=W*0.915;                    // правая колонка
-  const T=128+topSafe;                // верхний ряд (под брендом)
-  const B=H-96-botSafe;               // нижний ряд (над подсказкой)
+  const T=112+topSafe;                // верхняя линия (под брендом)
+  const B=H-124-botSafe;              // нижняя линия (запас под подпись + подсказку)
   if(!window.__grid){
     // ===== FREE-PREMIUM: симметричный «ореол-овал» — 6 зеркальных пар по эллипсу + 1 корона =====
     // Билатеральная симметрия относительно вертикальной оси cx (каждая пара — точное зеркало по x).
@@ -538,47 +546,33 @@ if(IS_TOUCH){
     const midY      = (usableTop+usableBot)/2;   // экватор ≈ cy
     const cxv       = cx;
     const Rx        = W*0.40;                     // макс. горизонтальный радиус (у экватора)
-    const RxMin     = W*0.135;                    // мин. горизонтальный радиус (у верх/низа)
-    // 7 вертикальных уровней пар, равномерно по высоте рабочей зоны (увеличенные зазоры)
-    const fr = [0.08, 0.235, 0.39, 0.545, 0.70, 0.855, 1.0];
-    // горизонтальный радиус по уровню: эллипс, максимум у экватора (fr≈0.5)
-    function xr(f){ const e=Math.sin(f*Math.PI); return RxMin + (Rx-RxMin)*e; }
-    const pairs = fr.map(f=>({ y: usableTop + span*f, dx: xr(f) }));
-    // карта индекс→позиция. Длинные подписи (8 «Платформа…», 9 «Книга…») кладём на ряды с запасом.
-    // pts[0] — корона на оси; затем зеркальные пары L/R.
-    const pts=[
-      {x:cxv,                 y:usableTop},               // 0  корона (на оси, сверху)
-      {x:cxv - pairs[0].dx,   y:pairs[0].y},              // 1  верх-лево
-      {x:cxv + pairs[0].dx,   y:pairs[0].y},              // 2  верх-право
-      {x:cxv - pairs[1].dx,   y:pairs[1].y},              // 3  верх-середина лево
-      {x:cxv + pairs[1].dx,   y:pairs[1].y},              // 4  верх-середина право
-      {x:cxv - pairs[2].dx,   y:pairs[2].y},              // 5  экватор-верх лево
-      {x:cxv + pairs[2].dx,   y:pairs[2].y},              // 6  экватор-верх право
-      {x:cxv - pairs[3].dx,   y:pairs[3].y},              // 7  экватор лево (широко)
-      {x:cxv + pairs[3].dx,   y:pairs[3].y},              // 8  экватор право (широко)
-      {x:cxv - pairs[4].dx,   y:pairs[4].y},              // 9  низ-середина лево
-      {x:cxv + pairs[4].dx,   y:pairs[4].y},              // 10 низ-середина право
-      {x:cxv - pairs[5].dx,   y:pairs[5].y},              // 11 низ-лево
-      {x:cxv + pairs[5].dx,   y:pairs[5].y},              // 12 низ-право
-      {x:cxv - pairs[6].dx,   y:pairs[6].y},              // 13 нижняя лево
-      {x:cxv + pairs[6].dx,   y:pairs[6].y}               // 14 нижняя право
-    ];
-    // гарантируем зазор центра ≥ ~104px от лого
-    const clearC=Math.max(104, coreRadius+60);
+    const RxMin     = W*0.24;                    // мин. горизонтальный радиус (у верх/низа)
+    // ДИНАМИЧЕСКИ от количества разделов: 1 «корона» сверху + зеркальные пары
+    // вниз ДО САМОЙ нижней линии → объекты всегда растянуты на весь экран.
+    const N=PLANETS.length;
+    const nPairs=Math.max(1,Math.floor((N-1)/2));
+    const extraTail=((N-1)%2)===1;
+    function xr(f){ return RxMin + (Rx-RxMin)*Math.sin(f*Math.PI); }
+    const pts=[{x:cxv,y:usableTop}];
+    for(let i=1;i<=nPairs;i++){
+      const f=i/nPairs, y=usableTop+span*f, dx=xr(f);
+      pts.push({x:cxv-dx,y:y});
+      pts.push({x:cxv+dx,y:y});
+    }
+    if(extraTail) pts.push({x:cxv,y:usableBot});
+    const clearC=Math.max(104, coreRadius+64);
     PLANETS.forEach((p,i)=>{
       let g=pts[i]||{x:cxv,y:midY};
       let gx=g.x, gy=g.y;
       const d=Math.hypot(gx-cx,gy-cy);
       if(d<clearC){ const a=Math.atan2(gy-cy,gx-cx)||0; gx=cx+Math.cos(a)*clearC; gy=cy+Math.sin(a)*clearC; }
       p._homeX=gx; p._homeY=gy;
-      // спокойное, очень мелкое «дыхание» — премиальная сдержанность
+      p.x=gx; p.y=gy;                     // ставим сразу, без «сползания»
       p._dphase=Math.random()*Math.PI*2;
       p._dspd=0.00026+Math.random()*0.00014;
-      p._damp=2.8+Math.random()*1.6;     // маленькая амплитуда → дорого/спокойно
+      p._damp=2.2+Math.random()*1.0;
       p._dax=Math.random()*Math.PI*2;
-      // ряды НИЖЕ экватора подписываем НАД шаром (чтобы не задеть подсказку/соседей);
-      // экватор и верх — подпись ПОД шаром. Так в каждом «зазоре» между рядами только одна подпись.
-      p._labelUp = (gy > midY + span*0.03);
+      p._labelUp=false;                   // подпись ВСЕГДА под кругом
     });
     window.__grid=1;
   }
@@ -712,27 +706,41 @@ if(IS_TOUCH && p._labelUp){
   ctx.restore();
   labelTop = p.y - nodeR - 6 - lines*lh;
 }else{
-  labelTop = p.y + nodeR + (IS_TOUCH?7:15);
+  labelTop = p.y + nodeR + (IS_TOUCH?10:15);
 }
 ctx.textAlign='center';ctx.textBaseline='top';
 // размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
-const fsBase=IS_TOUCH?7:11, fsPanel=IS_TOUCH?8:12;
+const fsBase=IS_TOUCH?10:11, fsPanel=IS_TOUCH?11:12;
 ctx.font=((isHover||isPanel||featured)?'700 ':'500 ')+((isPanel||featured)?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
 // неактивные — приглушённая серая подпись
 ctx.fillStyle=inactive?((isHover||isPanel)?'rgba(200,205,213,0.78)':'rgba(150,155,165,0.5)')
                       :((isHover||isPanel||featured)?'#FFFFFF':'rgba(238,240,243,0.85)');
 ctx.shadowColor=(isPanel||featured)?(inactive?'rgba(120,125,135,0.6)':'rgba(255,30,55,0.9)'):'rgba(0,0,0,0.95)';ctx.shadowBlur=(isPanel||featured)?14:7;
-const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?10:15);
+const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?13:15);
 p.labelHalf=Math.max(p.labelHalf||0, lw/2); // запоминаем фактическую полуширину подписи
 ctx.shadowBlur=0;
 }
+// Точки фирменного лого (тот же массив, что рисует кольцо в шапке)
+const LOGO_DOTS=[[38.75,12.94,0.8,'w'],[42.45,16.11,0.8,'w'],[44.65,20.25,0.8,'w'],[4.26,21.34,0.85,'r'],[4.0,28.53,0.95,'r'],[34.33,11.03,0.95,'w'],[5.64,36.02,1.1,'r'],[29.77,10.3,1.1,'w'],[25.36,10.85,1.15,'w'],[21.06,12.94,1.25,'w'],[9.7,42.79,1.3,'r'],[17.42,16.23,1.32,'w'],[15.12,20.28,1.42,'w'],[15.66,48.12,1.5,'r'],[13.92,24.83,1.57,'w'],[22.48,51.36,1.62,'r'],[14.04,29.36,1.65,'w'],[15.68,33.81,1.8,'w'],[30.02,52.34,1.86,'r'],[18.47,37.66,1.9,'w'],[37.43,51.37,1.98,'r'],[44.42,48.2,2.2,'r'],[50.27,42.78,2.38,'r'],[54.26,36.03,2.55,'r'],[56.0,28.76,2.72,'r'],[55.64,21.19,2.9,'r'],[53.17,14.0,3.1,'r'],[48.51,7.66,3.28,'r']];
 function drawCoreLogo(now){
-const baseR=IS_TOUCH?Math.max(40,MIN*0.085):Math.max(70,MIN*0.13);
+const baseR=IS_TOUCH?Math.max(66,MIN*0.155):Math.max(70,MIN*0.13);
 const pulse=1+0.11*Math.sin(now*0.0022); // выраженный синхронный пульс всего лого
 const R=baseR*pulse;
 const halo=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
 halo.addColorStop(0,`rgba(224,16,41,${0.5*pulse})`);halo.addColorStop(0.3,'rgba(224,16,41,0.16)');halo.addColorStop(1,'rgba(224,16,41,0)');
 ctx.beginPath();ctx.arc(cx,cy,R*2.4,0,Math.PI*2);ctx.fillStyle=halo;ctx.fill();
+if(IS_TOUCH){
+// МОБИЛЬНЫЙ: кольцо из ТОЧЕК ФИРМЕННОГО ЛОГО, ровное плавное вращение
+const rot=now*0.00042, sc=R/26, ca=Math.cos(rot), sa=Math.sin(rot);
+for(const d of LOGO_DOTS){
+const vx=d[0]-30, vy=d[1]-30;
+const x=cx+(vx*ca-vy*sa)*sc, y=cy+(vx*sa+vy*ca)*sc;
+ctx.beginPath();ctx.arc(x,y,Math.max(0.7,d[2]*sc),0,Math.PI*2);
+if(d[3]==='r'){ctx.fillStyle='#E01029';ctx.shadowColor='rgba(224,16,41,0.85)';ctx.shadowBlur=7;}
+else{ctx.fillStyle='#F2F3F5';ctx.shadowColor='rgba(255,255,255,0.45)';ctx.shadowBlur=5;}
+ctx.fill();
+}
+}else{
 const rot=now*0.0007,N=32;
 for(let i=0;i<N;i++){
 const a=(i/N)*Math.PI*2+rot,t=i/N;
@@ -744,11 +752,12 @@ if(isRed){ctx.fillStyle='#E01029';ctx.shadowColor='rgba(224,16,41,0.8)';ctx.shad
 else{ctx.fillStyle='#F2F3F5';ctx.shadowColor='rgba(255,255,255,0.4)';ctx.shadowBlur=5;}
 ctx.fill();
 }
+}
 ctx.shadowBlur=0;
 ctx.textAlign='center';ctx.textBaseline='middle';
 // надпись масштабируется ВМЕСТЕ с кольцом (тот же pulse)
-const fs1=IS_TOUCH?Math.max(10,R*0.18):Math.max(13,R*0.2);
-const fs2=IS_TOUCH?Math.max(13,R*0.27):Math.max(17,R*0.3);
+const fs1=IS_TOUCH?Math.max(9,R*0.15):Math.max(13,R*0.2);
+const fs2=IS_TOUCH?Math.max(12,R*0.23):Math.max(17,R*0.3);
 ctx.shadowColor='rgba(224,16,41,0.5)';ctx.shadowBlur=6+6*((pulse-1)/0.11+1)/2;
 ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
 ctx.fillText('ЭКОСИСТЕМА',cx,cy-fs2*0.36);
@@ -765,7 +774,7 @@ lines.forEach((l,i)=>ctx.fillText(l,x,sy+i*lh));
 }
 function wrapTextTop(text,x,top,lh){
 // перенос по реальной ширине; на узком мобильном делаем уже, чтобы подпись не вылезала за край
-const maxW=IS_TOUCH?Math.min(120, W*0.34):Math.min(150, W*0.4);
+const maxW=IS_TOUCH?Math.min(140, W*0.38):Math.min(150, W*0.4);
 const words=text.split(' ');let line='',lines=[];
 for(const w of words){
 const test=line?line+' '+w:w;
@@ -874,7 +883,7 @@ try{(function(){
 try{(function buildBrandRing(){
   const svg=document.querySelector('.brand-ring');
   if(!svg)return;
-  const DOTS=[[38.75,12.94,0.8,'w'],[42.45,16.11,0.8,'w'],[44.65,20.25,0.8,'w'],[4.26,21.34,0.85,'r'],[4.0,28.53,0.95,'r'],[34.33,11.03,0.95,'w'],[5.64,36.02,1.1,'r'],[29.77,10.3,1.1,'w'],[25.36,10.85,1.15,'w'],[21.06,12.94,1.25,'w'],[9.7,42.79,1.3,'r'],[17.42,16.23,1.32,'w'],[15.12,20.28,1.42,'w'],[15.66,48.12,1.5,'r'],[13.92,24.83,1.57,'w'],[22.48,51.36,1.62,'r'],[14.04,29.36,1.65,'w'],[15.68,33.81,1.8,'w'],[30.02,52.34,1.86,'r'],[18.47,37.66,1.9,'w'],[37.43,51.37,1.98,'r'],[44.42,48.2,2.2,'r'],[50.27,42.78,2.38,'r'],[54.26,36.03,2.55,'r'],[56.0,28.76,2.72,'r'],[55.64,21.19,2.9,'r'],[53.17,14.0,3.1,'r'],[48.51,7.66,3.28,'r']];
+  const DOTS=LOGO_DOTS;
   for(const [x,y,r,col] of DOTS){
     const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
     c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',r);
