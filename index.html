@@ -763,14 +763,8 @@ const fs1=IS_TOUCH?8.5:Math.max(13,R*0.2);
 const fs2=IS_TOUCH?11.5:Math.max(17,R*0.3);
 ctx.shadowColor='rgba(224,16,41,0.5)';ctx.shadowBlur=6+6*((pulse-1)/0.11+1)/2;
 if(IS_TOUCH){
-// МОБИЛЬНЫЙ: надпись ПОД кольцом — как в фирменном логотипе (пропорция логичная)
-const outer=29*(R/26), ty=cy+outer+11;
-ctx.textBaseline='top';
-ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
-ctx.fillText('ЭКОСИСТЕМА',cx,ty);
-ctx.font='900 '+fs2+"px 'Montserrat', sans-serif";ctx.fillStyle='#E01029';
-ctx.fillText('ОП',cx,ty+fs1*1.3);
-ctx.textBaseline='middle';
+// МОБИЛЬНЫЙ: надписи в центре НЕТ — логотип «СИСТЕМА ОП» уже есть в шапке,
+// в созвездии остаётся только кольцо (чище и больше воздуха).
 }else{
 ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
 ctx.fillText('ЭКОСИСТЕМА',cx,cy-fs2*0.36);
