@@ -518,7 +518,7 @@ function updatePlanets(k){
 coreRadius=IS_TOUCH?Math.max(40,MIN*0.10):Math.max(64,MIN*0.15);
 const szMul=IS_TOUCH?0.62:1;
 // МОБИЛЬНЫЙ: все круги СТРОГО одного размера, дыхание синхронное (без разнобоя)
-const mobR=Math.max(11,Math.min(15,MIN*0.037));
+const mobR=Math.max(8,Math.min(10.5,MIN*0.026));
 const mobPulse=1+0.05*Math.sin(nowG*0.0013);
 for(const p of PLANETS){
 if(IS_TOUCH){p.size=mobR*mobPulse;p.maxSize=mobR*1.12;continue;}
@@ -633,7 +633,7 @@ const isHover=(hoverPlanet===p||dragPlanet===p);
 const isPanel=(panelHover===p);
 const inactive=(!p.link||p.link==='#'); // нет сайта → серый, некликабельный вид
 const featured=(typeof FEATURED!=='undefined'&&p.name===FEATURED); // выделенный раздел — всегда цепляет взгляд
-let sz=p.size;if(featured)sz*=1.32;if(isPanel)sz*=1.6;else if(isHover)sz*=1.12;
+let sz=p.size;if(featured)sz*=(IS_TOUCH?1.22:1.32);if(isPanel)sz*=1.6;else if(isHover)sz*=1.12;
 // пульсирующее кольцо-маркер при наведении из панели
 if(isPanel){
   const ringR=sz*1.9+6*Math.sin(now*0.012);
@@ -644,11 +644,11 @@ if(isPanel){
 if(featured){
   const c1=(now*0.0013)%1, c2=(c1+0.5)%1;
   [c1,c2].forEach((t,i)=>{
-    const pr=sz*1.5+t*sz*2.6;
+    const pr=sz*(IS_TOUCH?1.35:1.5)+t*sz*(IS_TOUCH?1.9:2.6);
     ctx.beginPath();ctx.arc(p.x,p.y,pr,0,Math.PI*2);
     ctx.strokeStyle='rgba(255,'+(100+i*25)+',120,'+(0.55*(1-t)).toFixed(3)+')';ctx.lineWidth=2.5*(1-t)+0.4;ctx.stroke();
   });
-  const rr=sz*1.34+2.5*Math.sin(now*0.006);
+  const rr=sz*(IS_TOUCH?1.26:1.34)+(IS_TOUCH?1.6:2.5)*Math.sin(now*0.006);
   ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);
   ctx.strokeStyle='rgba(255,150,165,0.92)';ctx.lineWidth=2;ctx.stroke();
 }
@@ -657,7 +657,7 @@ const sh=ctx.createRadialGradient(p.x,p.y+sz*0.2,0,p.x,p.y+sz*0.2,sz*1.5);
 sh.addColorStop(0,'rgba(0,0,0,0.35)');sh.addColorStop(1,'rgba(0,0,0,0)');
 ctx.beginPath();ctx.arc(p.x,p.y+sz*0.2,sz*1.5,0,Math.PI*2);ctx.fillStyle=sh;ctx.fill();
 // внешнее свечение (ореол): у неактивных — слабое серое
-const glowA=isPanel?0.85:(isHover?0.5:(featured?0.62:0.24));
+const glowA=(isPanel?0.85:(isHover?0.5:(featured?0.62:0.24)))*(IS_TOUCH?0.62:1);
 const glowR=(isPanel||featured)?sz*3.4:sz*2.8;
 const pg=ctx.createRadialGradient(p.x,p.y,sz*0.6,p.x,p.y,glowR);
 if(inactive){pg.addColorStop(0,`rgba(150,155,165,${glowA*0.35})`);pg.addColorStop(1,'rgba(120,125,135,0)');}
@@ -696,7 +696,7 @@ ctx.beginPath();ctx.arc(p.x,p.y,sz,0,Math.PI*2);
 ctx.strokeStyle=inactive?`rgba(190,195,205,${isHover?0.45:0.18})`:`rgba(255,140,155,${isHover?0.7:0.22})`;ctx.lineWidth=1;ctx.stroke();
 // подпись — аккуратный капс с разрядкой. На мобильном нижние узлы подписываем НАД шаром,
 // чтобы не было перекрытия с подсказкой/соседями (флаг _labelUp выставлен в updatePlanets).
-const nodeR=(p.maxSize||sz)*(featured?1.32:1);
+const nodeR=(p.maxSize||sz)*(featured?(IS_TOUCH?1.22:1.32):1);
 let labelTop;
 if(IS_TOUCH && p._labelUp){
   // считаем высоту подписи (1–2 строки по 10px), ставим её НАД шаром
@@ -709,24 +709,24 @@ if(IS_TOUCH && p._labelUp){
   ctx.restore();
   labelTop = p.y - nodeR - 6 - lines*lh;
 }else{
-  labelTop = p.y + nodeR + (IS_TOUCH?10:15);
+  labelTop = p.y + nodeR + (IS_TOUCH?9:15);
 }
 ctx.textAlign='center';ctx.textBaseline='top';
 // размер подписи: десктоп 11/12, мобильный мельче (7.5/8.5)
-const fsBase=IS_TOUCH?10:11, fsPanel=IS_TOUCH?11:12;
+const fsBase=IS_TOUCH?8.5:11, fsPanel=IS_TOUCH?9.5:12;
 ctx.font=((isHover||isPanel||featured)?'700 ':'500 ')+((isPanel||featured)?fsPanel:fsBase)+"px 'Montserrat', sans-serif";
 // неактивные — приглушённая серая подпись
 ctx.fillStyle=inactive?((isHover||isPanel)?'rgba(200,205,213,0.78)':'rgba(150,155,165,0.5)')
                       :((isHover||isPanel||featured)?'#FFFFFF':'rgba(238,240,243,0.85)');
 ctx.shadowColor=(isPanel||featured)?(inactive?'rgba(120,125,135,0.6)':'rgba(255,30,55,0.9)'):'rgba(0,0,0,0.95)';ctx.shadowBlur=(isPanel||featured)?14:7;
-const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?13:15);
+const lw=wrapTextTop(p.name.toUpperCase(),p.x,labelTop,IS_TOUCH?11:15);
 p.labelHalf=Math.max(p.labelHalf||0, lw/2); // запоминаем фактическую полуширину подписи
 ctx.shadowBlur=0;
 }
 // Точки фирменного лого (тот же массив, что рисует кольцо в шапке)
 const LOGO_DOTS=[[38.75,12.94,0.8,'w'],[42.45,16.11,0.8,'w'],[44.65,20.25,0.8,'w'],[4.26,21.34,0.85,'r'],[4.0,28.53,0.95,'r'],[34.33,11.03,0.95,'w'],[5.64,36.02,1.1,'r'],[29.77,10.3,1.1,'w'],[25.36,10.85,1.15,'w'],[21.06,12.94,1.25,'w'],[9.7,42.79,1.3,'r'],[17.42,16.23,1.32,'w'],[15.12,20.28,1.42,'w'],[15.66,48.12,1.5,'r'],[13.92,24.83,1.57,'w'],[22.48,51.36,1.62,'r'],[14.04,29.36,1.65,'w'],[15.68,33.81,1.8,'w'],[30.02,52.34,1.86,'r'],[18.47,37.66,1.9,'w'],[37.43,51.37,1.98,'r'],[44.42,48.2,2.2,'r'],[50.27,42.78,2.38,'r'],[54.26,36.03,2.55,'r'],[56.0,28.76,2.72,'r'],[55.64,21.19,2.9,'r'],[53.17,14.0,3.1,'r'],[48.51,7.66,3.28,'r']];
 function drawCoreLogo(now){
-const baseR=IS_TOUCH?Math.max(52,MIN*0.133):Math.max(70,MIN*0.13);
+const baseR=IS_TOUCH?Math.max(31,MIN*0.080):Math.max(70,MIN*0.13);
 const pulse=1+(IS_TOUCH?0.05:0.11)*Math.sin(now*0.0022); // на мобильном пульс тише — надпись не вылезает
 const R=baseR*pulse;
 const halo=ctx.createRadialGradient(cx,cy,0,cx,cy,R*2.4);
@@ -738,7 +738,7 @@ const rot=now*0.00042, sc=R/26, ca=Math.cos(rot), sa=Math.sin(rot);
 for(const d of LOGO_DOTS){
 const vx=d[0]-30, vy=d[1]-30;
 const x=cx+(vx*ca-vy*sa)*sc, y=cy+(vx*sa+vy*ca)*sc;
-ctx.beginPath();ctx.arc(x,y,Math.max(0.7,d[2]*sc),0,Math.PI*2);
+ctx.beginPath();ctx.arc(x,y,Math.max(1.15,d[2]*sc),0,Math.PI*2);
 if(d[3]==='r'){ctx.fillStyle='#E01029';ctx.shadowColor='rgba(224,16,41,0.85)';ctx.shadowBlur=7;}
 else{ctx.fillStyle='#F2F3F5';ctx.shadowColor='rgba(255,255,255,0.45)';ctx.shadowBlur=5;}
 ctx.fill();
@@ -759,13 +759,24 @@ ctx.fill();
 ctx.shadowBlur=0;
 ctx.textAlign='center';ctx.textBaseline='middle';
 // надпись масштабируется ВМЕСТЕ с кольцом (тот же pulse)
-const fs1=IS_TOUCH?8:Math.max(13,R*0.2);
-const fs2=IS_TOUCH?11:Math.max(17,R*0.3);
+const fs1=IS_TOUCH?8.5:Math.max(13,R*0.2);
+const fs2=IS_TOUCH?11.5:Math.max(17,R*0.3);
 ctx.shadowColor='rgba(224,16,41,0.5)';ctx.shadowBlur=6+6*((pulse-1)/0.11+1)/2;
+if(IS_TOUCH){
+// МОБИЛЬНЫЙ: надпись ПОД кольцом — как в фирменном логотипе (пропорция логичная)
+const outer=29*(R/26), ty=cy+outer+11;
+ctx.textBaseline='top';
+ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
+ctx.fillText('ЭКОСИСТЕМА',cx,ty);
+ctx.font='900 '+fs2+"px 'Montserrat', sans-serif";ctx.fillStyle='#E01029';
+ctx.fillText('ОП',cx,ty+fs1*1.3);
+ctx.textBaseline='middle';
+}else{
 ctx.font='800 '+fs1+"px 'Montserrat', sans-serif";ctx.fillStyle=WHITE;
 ctx.fillText('ЭКОСИСТЕМА',cx,cy-fs2*0.36);
 ctx.font='900 '+fs2+"px 'Montserrat', sans-serif";ctx.fillStyle='#E01029';
 ctx.fillText('ОП',cx,cy+fs1*0.62);
+}
 ctx.shadowBlur=0;
 }
 function wrapText(text,x,y,lh){
@@ -777,7 +788,7 @@ lines.forEach((l,i)=>ctx.fillText(l,x,sy+i*lh));
 }
 function wrapTextTop(text,x,top,lh){
 // перенос по реальной ширине; на узком мобильном делаем уже, чтобы подпись не вылезала за край
-const maxW=IS_TOUCH?Math.min(120, W*0.31):Math.min(150, W*0.4);
+const maxW=IS_TOUCH?Math.min(108, W*0.28):Math.min(150, W*0.4);
 const words=text.split(' ');let line='',lines=[];
 for(const w of words){
 const test=line?line+' '+w:w;
